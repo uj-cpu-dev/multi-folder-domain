@@ -10,6 +10,7 @@
   "acme_email": "",
   "acme_staging": false,
   "manage_dns": false,
+  "fail_on_skipped": true,
 
   "admin_cidr": ""
 }

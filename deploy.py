@@ -130,6 +130,12 @@ ACME_STAGING = flag("acme_staging", True)
 # Route 53. Off by default, because it writes to DNS.
 MANAGE_DNS = flag("manage_dns", False)
 
+# A folder with a real mistake in it (typo'd hostname, broken JSON, two folders
+# claiming one domain) marks the run as failed so it doesn't go unnoticed. A
+# folder that simply has no domain yet never does. Set this to false to make
+# even the real mistakes warnings only.
+FAIL_ON_SKIPPED = flag("fail_on_skipped", True)
+
 SG_NAME = f"{PROJECT}-sg"
 ROLE_NAME = f"{PROJECT}-ec2-role"
 PROFILE_NAME = f"{PROJECT}-ec2-profile"
@@ -180,7 +186,7 @@ EXPOSE 80
 """
 
 
-def load_sites() -> tuple[list[dict[str, Any]], list[tuple[str, str]]]:
+def load_sites() -> tuple[list[dict[str, Any]], list[tuple[str, str, str]]]:
     """Any directory holding a site.json is a site. That is the whole rule.
 
     A folder that isn't ready — no domain yet, a typo, no index.html — is
@@ -188,11 +194,23 @@ def load_sites() -> tuple[list[dict[str, Any]], list[tuple[str, str]]]:
     sites from deploying; that is the same isolation Caddy gets by not
     depending on every container being healthy.
 
-    Returns (good sites, problems). The caller deploys the good ones and then
-    exits non-zero if there were problems, so the run still shows red.
+    A folder with NO site.json isn't a site at all — it is invisible here and
+    never mentioned. Notes, drafts, scratch directories: all ignored.
+
+    A folder that HAS a site.json is sorted into one of three outcomes:
+
+      deployed  — everything it needs is there
+      notready  — no domain set yet. A draft. Mentioned once, quietly,
+                  and the run still passes.
+      broken    — a typo, bad JSON, a clash. Something you meant to work
+                  and doesn't. Listed loudly, and the run goes red unless
+                  config.json sets "fail_on_skipped": false.
+
+    Returns (good sites, problems) where each problem is
+    (folder, reason, "notready" | "broken").
     """
     sites: list[dict[str, Any]] = []
-    problems: list[tuple[str, str]] = []
+    problems: list[tuple[str, str, str]] = []
 
     for manifest in sorted(ROOT.glob("*/site.json")):
         folder = manifest.parent
@@ -202,35 +220,34 @@ def load_sites() -> tuple[list[dict[str, Any]], list[tuple[str, str]]]:
 
         if not FOLDER_RE.match(name):
             problems.append((name, "folder name can't be a container name — use "
-                                   "lowercase letters, numbers, dashes, underscores"))
+                                   "lowercase letters, numbers, dashes, underscores", "broken"))
             continue
 
         try:
             data = json.loads(manifest.read_text())
         except json.JSONDecodeError as exc:
-            problems.append((name, f"site.json is not valid JSON: {exc}"))
+            problems.append((name, f"site.json is not valid JSON: {exc}", "broken"))
             continue
         if not isinstance(data, dict):
-            problems.append((name, "site.json must contain a JSON object"))
+            problems.append((name, "site.json must contain a JSON object", "broken"))
             continue
 
         domain = str(data.get("domain", "")).strip().lower()
         if not domain:
-            problems.append((name, "no domain set yet — skipped, nothing was deployed "
-                                   "for this folder"))
+            problems.append((name, "no domain set yet — ignored", "notready"))
             continue
         if not HOSTNAME_RE.match(domain):
-            problems.append((name, f"'{domain}' is not a valid hostname"))
+            problems.append((name, f"'{domain}' is not a valid hostname", "broken"))
             continue
 
         raw_aliases = data.get("aliases", [])
         if not isinstance(raw_aliases, list):
-            problems.append((name, "'aliases' must be a list"))
+            problems.append((name, "'aliases' must be a list", "broken"))
             continue
         aliases = [str(a).strip().lower() for a in raw_aliases if str(a).strip()]
         bad_alias = next((a for a in aliases if not HOSTNAME_RE.match(a)), None)
         if bad_alias:
-            problems.append((name, f"alias '{bad_alias}' is not a valid hostname"))
+            problems.append((name, f"alias '{bad_alias}' is not a valid hostname", "broken"))
             continue
 
         try:
@@ -238,12 +255,12 @@ def load_sites() -> tuple[list[dict[str, Any]], list[tuple[str, str]]]:
             if not 1 <= port <= 65535:
                 raise ValueError
         except (TypeError, ValueError):
-            problems.append((name, f"port {data.get('port')!r} is not a number between 1 and 65535"))
+            problems.append((name, f"port {data.get('port')!r} is not a number between 1 and 65535", "broken"))
             continue
 
         has_dockerfile = (folder / "Dockerfile").exists()
         if not has_dockerfile and not (folder / "index.html").exists():
-            problems.append((name, "no index.html and no Dockerfile — needs one or the other"))
+            problems.append((name, "no index.html and no Dockerfile — needs one or the other", "broken"))
             continue
 
         sites.append(
@@ -271,11 +288,11 @@ def load_sites() -> tuple[list[dict[str, Any]], list[tuple[str, str]]]:
         if len(folders) > 1:
             for f in sorted(set(folders)):
                 problems.append((f, f"'{host}' is claimed by {' and '.join(sorted(set(folders)))} "
-                                    "— all of them skipped, since there is no way to pick one"))
+                                    "— all of them skipped, since there is no way to pick one", "broken"))
     sites = [s for s in sites if s["folder"] not in conflicted]
 
     if not sites:
-        for folder, why in problems:
+        for folder, why, _ in problems:
             log(f"{folder}: {why}")
         fail(
             "No deployable folders. Every folder with a site.json has a problem, "
@@ -965,6 +982,16 @@ def deploy_payload(instance_id: str, payload: bytes) -> None:
             "caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile",
             "echo '--- building and starting ---'",
             "docker compose up -d --build --remove-orphans --wait --wait-timeout 600",
+            # The Caddyfile is a bind mount. Compose compares service
+            # definitions, not file contents, so a changed Caddyfile alone
+            # leaves the container running with the OLD config and nothing
+            # looks wrong. Tell Caddy explicitly. The reload is graceful —
+            # no restart, no dropped connections — and harmless if the
+            # container was just recreated anyway.
+            "echo '--- reloading caddy ---'",
+            "docker compose exec -T caddy caddy reload "
+            "--config /etc/caddy/Caddyfile --adapter caddyfile "
+            "|| docker compose restart caddy",
             "docker compose ps --format '{{.Name}}\\t{{.State}}\\t{{.Status}}'",
         ],
         "deploy containers",
@@ -1016,6 +1043,9 @@ def rollback(instance_id: str) -> None:
             f"rm -rf {APP_DIR} && cp -a {PREV_DIR} {APP_DIR}",
             f"cd {APP_DIR}",
             "docker compose up -d --build --remove-orphans --wait --wait-timeout 300",
+            "docker compose exec -T caddy caddy reload "
+            "--config /etc/caddy/Caddyfile --adapter caddyfile "
+            "|| docker compose restart caddy",
             "docker compose ps --format '{{.Name}}\\t{{.State}}\\t{{.Status}}'",
         ],
         "rollback",
@@ -1098,9 +1128,17 @@ def main() -> None:
         kind = "own Dockerfile" if site["own_dockerfile"] else "static (nginx)"
         log(f"{site['folder']:<20} {names:<40} [{kind}]")
 
-    if problems:
-        step(f"SKIPPED {len(problems)} folder(s) — the rest still deploy")
-        for folder, why in problems:
+    notready = [(f, w) for f, w, sev in problems if sev == "notready"]
+    broken = [(f, w) for f, w, sev in problems if sev == "broken"]
+
+    if notready:
+        step(f"Ignored {len(notready)} folder(s) with no domain set")
+        for folder, why in notready:
+            log(f"{folder:<20} {why}")
+
+    if broken:
+        step(f"SKIPPED {len(broken)} folder(s) with problems — the rest still deploy")
+        for folder, why in broken:
             log(f"{folder:<20} {why}")
         log("")
         log("A skipped folder is not deployed. If it was live before, its")
@@ -1131,12 +1169,8 @@ def main() -> None:
         print(caddyfile)
         step("docker-compose.yml that would be written")
         print(compose)
-        if problems:
-            step(f"{len(problems)} folder(s) would be skipped")
-            for folder, why in problems:
-                log(f"{folder:<20} {why}")
         step("Plan complete — nothing was changed.")
-        if problems:
+        if broken and FAIL_ON_SKIPPED:
             sys.exit(1)
         return
 
@@ -1182,13 +1216,14 @@ def main() -> None:
     else:
         print("\n  All domains are pointed at the server. Nothing left to do.\n")
 
-    if problems:
-        step("Finished, but with skipped folders")
-        for folder, why in problems:
+    if broken and FAIL_ON_SKIPPED:
+        step("Finished, but one or more folders have problems")
+        for folder, why in broken:
             log(f"{folder:<20} {why}")
         log("")
         log("The healthy sites are live. This run is marked failed so the")
-        log("skipped folders don't go unnoticed.")
+        log("broken folders don't go unnoticed. Set \"fail_on_skipped\": false")
+        log("in config.json if you would rather have a warning.")
         sys.exit(1)
 
 
