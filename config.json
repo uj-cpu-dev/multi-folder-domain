@@ -8,7 +8,7 @@
   "disk_gb": 20,
 
   "acme_email": "",
-  "acme_staging": true,
+  "acme_staging": false,
   "manage_dns": false,
 
   "admin_cidr": ""
