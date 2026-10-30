@@ -9,7 +9,8 @@ on:
         description: "What to run"
         type: choice
         default: deploy
-        options: [deploy, plan, status, rollback, certs]
+        options:
+          [deploy, plan, status, rollback, certs, reload-caddy, stop, start]
       folder_logs:
         description: "Folder name, to fetch its container logs instead"
         type: string
@@ -107,9 +108,47 @@ jobs:
         if: ${{ inputs.folder_logs == '' && inputs.action == 'rollback' }}
         run: python deploy.py --rollback
 
+      - name: Stop the server
+        if: ${{ inputs.folder_logs == '' && inputs.action == 'stop' }}
+        run: python deploy.py --stop
+
+      - name: Start the server
+        if: ${{ inputs.folder_logs == '' && inputs.action == 'start' }}
+        run: python deploy.py --start
+
       - name: Deploy
         if: ${{ inputs.folder_logs == '' && (inputs.action == 'deploy' || inputs.action == '') }}
         run: python deploy.py
+
+      # ---------------------------------------------------------------------
+      # Force Caddy to re-read its Caddyfile. Compose cannot see a changed
+      # bind-mounted file, so a Caddyfile-only change leaves the old config
+      # running. This does it directly over SSM and needs nothing from
+      # deploy.py beyond its helper functions.
+      # ---------------------------------------------------------------------
+      - name: Reload Caddy
+        if: ${{ inputs.folder_logs == '' && inputs.action == 'reload-caddy' }}
+        run: |
+          python - <<'PY'
+          import importlib.util, sys
+          spec = importlib.util.spec_from_file_location("deploy", "deploy.py")
+          m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+          inst = m.find_instance()
+          if not inst:
+              sys.exit("No instance found.")
+          m.run_remote(inst["InstanceId"], [
+              "set -eu",
+              "cd /srv/mfd",
+              "echo '--- Caddyfile on disk ---'",
+              "head -8 Caddyfile",
+              "echo '--- reloading ---'",
+              "docker compose exec -T caddy caddy reload "
+              "--config /etc/caddy/Caddyfile --adapter caddyfile "
+              "|| docker compose restart caddy",
+              "sleep 3",
+              "docker compose ps --format '{{.Name}}\t{{.State}}\t{{.Status}}'",
+          ], "reload caddy")
+          PY
 
       # ---------------------------------------------------------------------
       # Certificates and DNS. Runs after a deploy even if the deploy failed,
@@ -120,7 +159,7 @@ jobs:
       # the certificate — it is where the name actually points.
       # ---------------------------------------------------------------------
       - name: Certificates and DNS — where the name points, what is served
-        if: ${{ always() && inputs.folder_logs == '' && (inputs.action == 'deploy' || inputs.action == 'certs' || inputs.action == '') }}
+        if: ${{ always() && env.MFD_SERVER_OFF != 'true' && inputs.folder_logs == '' && (inputs.action == 'deploy' || inputs.action == 'certs' || inputs.action == '') }}
         continue-on-error: true
         run: |
           set -u
@@ -266,8 +305,14 @@ jobs:
               case "$FIRST_ISSUER" in
                 *STAGING*)
                   echo "  Serving a STAGING certificate."
-                  echo "  If section 1 says acme_staging: false, the Caddyfile on the"
-                  echo "  server has not been reloaded — check section 3." ;;
+                  echo ""
+                  echo "  If section 1 says acme_staging: False, the new Caddyfile was"
+                  echo "  shipped but the running Caddy never re-read it. Compose cannot"
+                  echo "  see a changed bind-mounted file, so the container is left alone."
+                  echo ""
+                  echo "  Fix: Actions -> Run workflow -> action: reload-caddy"
+                  echo "  Permanent fix: make sure deploy.py contains a 'caddy reload'"
+                  echo "  line after 'docker compose up' — run: grep -n 'caddy reload' deploy.py" ;;
                 *"Let's Encrypt"*)
                   echo "  Serving a real Let's Encrypt certificate. Nothing to do." ;;
                 "")
@@ -295,6 +340,20 @@ jobs:
         run: |
           {
             echo "### multi-folder-domain"
+            echo ""
+            if [ "${MFD_SERVER_OFF:-}" = "true" ] \
+               || [ "$(python -c "import json;print(json.load(open('config.json')).get('server_off',False))")" = "True" ]; then
+              echo "> # 🔴 THE SERVER IS OFF"
+              echo ">"
+              echo "> **Your sites are down.** Nothing is answering on your domains."
+              echo ">"
+              echo "> The Elastic IP and the disk are still billing — an address that"
+              echo "> is not attached to a *running* instance costs more, not less."
+              echo ">"
+              echo "> Turn it back on: set \`\"server_off\": false\` in \`config.json\` and push,"
+              echo "> or run this workflow with **action: start**."
+              echo ""
+            fi
             echo ""
             echo "settings from \`config.json\`:"
             echo ""

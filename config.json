@@ -1,16 +1,13 @@
 {
   "_comment": "Everything that used to live in GitHub repository variables. Edit it here, commit it, done. An environment variable of the same name in CAPITALS still wins, for one-off local runs.",
-
   "region": "us-east-1",
   "project_name": "multi-folder-domain",
-
   "instance_type": "t3.micro",
   "disk_gb": 20,
-
   "acme_email": "",
-  "acme_staging": false,
+  "acme_staging": true,
   "manage_dns": false,
   "fail_on_skipped": true,
-
+  "server_off": false,
   "admin_cidr": ""
 }
