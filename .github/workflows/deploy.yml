@@ -9,7 +9,7 @@ on:
         description: "What to run"
         type: choice
         default: deploy
-        options: [deploy, plan, status, rollback]
+        options: [deploy, plan, status, rollback, certs]
       folder_logs:
         description: "Folder name, to fetch its container logs instead"
         type: string
@@ -77,7 +77,7 @@ jobs:
               names = [str(data.get("domain", "")).strip().lower()]
               names += [str(a).strip().lower() for a in data.get("aliases", [])]
               if not names[0]:
-                  print(f"::warning file={m}::no domain set, this folder will be skipped")
+                  print(f"::notice file={m}::no domain set — this folder is ignored, not an error")
               for n in filter(None, names):
                   if not host.match(n):
                       print(f"::warning file={m}::'{n}' is not a valid hostname, this folder will be skipped")
@@ -86,10 +86,10 @@ jobs:
                   seen[n] = folder
               print(f"  {folder:<20} {', '.join(filter(None, names)) or '(no domain)'}")
           PY
-        # Warnings only. deploy.py is the single source of truth: it skips bad
-        # folders, deploys the good ones, and exits non-zero at the end so the
-        # run still shows red. Failing here would stop healthy sites deploying
-        # because of one half-written folder.
+        # Warnings only. deploy.py is the single source of truth: it ignores
+        # drafts, skips broken folders, deploys the good ones, and decides the
+        # exit code. Failing here would stop healthy sites deploying because of
+        # one half-written folder.
 
       - name: Container logs
         if: ${{ inputs.folder_logs != '' }}
@@ -111,6 +111,103 @@ jobs:
         if: ${{ inputs.folder_logs == '' && (inputs.action == 'deploy' || inputs.action == '') }}
         run: python deploy.py
 
+      # ---------------------------------------------------------------------
+      # Certificates. Runs after a deploy even if the deploy failed, and can
+      # also be run on its own from the Actions tab with action = certs.
+      # Answers three questions without you logging into anything:
+      #   1. which certificate authority is this configured to use
+      #   2. what did Caddy itself say it did
+      #   3. which certificate is actually being served right now
+      # ---------------------------------------------------------------------
+      - name: Certificates — configured, obtained, served
+        if: ${{ always() && inputs.folder_logs == '' && (inputs.action == 'deploy' || inputs.action == 'certs' || inputs.action == '') }}
+        continue-on-error: true
+        run: |
+          set -u
+          OUT=cert-report.txt
+          : > "$OUT"
+
+          {
+            echo "=== 1. CONFIGURED ==============================================="
+            python - <<'PY'
+          import json, pathlib
+          cfg = json.loads(pathlib.Path("config.json").read_text())
+          staging = cfg.get("acme_staging", True)
+          print(f"  acme_staging : {staging}")
+          print(f"  acme_email   : {cfg.get('acme_email','') or '(none)'}")
+          print("  expected CA  : " + (
+              "Let's Encrypt STAGING — browsers will NOT trust this"
+              if staging else
+              "Let's Encrypt production — browsers will trust this"))
+          PY
+
+            echo ""
+            echo "=== 2. WHAT CADDY SAID ========================================="
+            python deploy.py --logs caddy 2>&1 \
+              | grep -iE 'certificate|acme|tls|issuer|challenge|error|obtain' \
+              | tail -40 \
+              || echo "  (no certificate lines in the last 100 log lines)"
+
+            echo ""
+            echo "=== 3. WHAT IS ACTUALLY BEING SERVED ==========================="
+            DOMAINS=$(python - <<'PY'
+          import json, pathlib
+          out = []
+          for m in sorted(pathlib.Path(".").glob("*/site.json")):
+              try:
+                  d = json.loads(m.read_text())
+              except Exception:
+                  continue
+              dom = str(d.get("domain", "")).strip()
+              if not dom:
+                  continue
+              out.append(dom)
+              out += [str(a).strip() for a in d.get("aliases", []) if str(a).strip()]
+          print(" ".join(out))
+          PY
+          )
+            if [ -z "$DOMAINS" ]; then
+              echo "  (no domains configured yet)"
+            fi
+            for d in $DOMAINS; do
+              echo ""
+              echo "  --- $d"
+              code=$(curl -ksS -o /dev/null -m 20 -w '%{http_code}' "https://$d" 2>/dev/null || echo "000")
+              echo "      http status  : $code   (000 means it could not connect at all)"
+              curl -sv -o /dev/null -m 20 "https://$d" 2>&1 \
+                | grep -iE 'subject:|issuer:|expire date|SSL certificate verify|start date' \
+                | sed 's/^\*//; s/^/     /' \
+                || echo "      (no TLS details — connection may have failed)"
+            done
+
+            echo ""
+            echo "=== VERDICT ===================================================="
+            if [ -n "$DOMAINS" ]; then
+              set -- $DOMAINS
+              ISS=$(curl -sv -o /dev/null -m 20 "https://$1" 2>&1 | grep -i 'issuer:' | head -1 || true)
+              case "$ISS" in
+                *STAGING*) echo "  Serving a STAGING certificate."
+                           echo "  If config.json says acme_staging: false, the Caddyfile on the"
+                           echo "  server has not been reloaded — check section 2 above." ;;
+                *"Let's Encrypt"*) echo "  Serving a real Let's Encrypt certificate. Nothing to do." ;;
+                "")        echo "  Could not read an issuer. Either DNS is not pointed here yet,"
+                           echo "  or Caddy is not answering on 443. Check section 2." ;;
+                *)         echo "  Issuer: $ISS" ;;
+              esac
+            fi
+          } 2>&1 | tee -a "$OUT"
+
+          {
+            echo ""
+            echo "<details><summary>Certificate report</summary>"
+            echo ""
+            echo '```'
+            cat "$OUT"
+            echo '```'
+            echo ""
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Summary
         if: always()
         run: |
@@ -127,7 +224,13 @@ jobs:
             echo "| --- | --- | --- |"
             for f in */site.json; do
               dir=$(dirname "$f")
-              dom=$(python -c "import json,sys;print(json.load(open(sys.argv[1]))['domain'])" "$f")
+              dom=$(python -c "
+          import json,sys
+          try:
+              print(json.load(open(sys.argv[1])).get('domain','') or '_(no domain — ignored)_')
+          except Exception:
+              print('_(unreadable site.json)_')
+          " "$f")
               if [ -f "$dir/Dockerfile" ]; then img="own Dockerfile"; else img="static (nginx)"; fi
               echo "| \`$dir\` | $dom | $img |"
             done
