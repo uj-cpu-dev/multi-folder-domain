@@ -942,7 +942,9 @@ def deploy_payload(instance_id: str, payload: bytes) -> None:
     run_remote(
         instance_id,
         [
-            "set -euo pipefail",
+            # SSM runs these with /bin/sh, which is dash on Ubuntu. dash has
+            # no "pipefail", so keep every command POSIX.
+            "set -eu",
             "umask 022",
             "rm -rf /tmp/mfd && mkdir -p /tmp/mfd",
             f"echo '{encoded}' | base64 -d > /tmp/mfd/payload.tgz",
@@ -981,7 +983,7 @@ def health_check(instance_id: str, sites: list[dict[str, Any]]) -> bool:
     ]
     out = run_remote(
         instance_id,
-        ["set -uo pipefail", f"cd {APP_DIR}", *checks],
+        ["set -u", f"cd {APP_DIR}", *checks],   # POSIX sh: no pipefail
         "health check",
         timeout=300,
         quiet=True,
@@ -1007,7 +1009,9 @@ def rollback(instance_id: str) -> None:
     run_remote(
         instance_id,
         [
-            "set -euo pipefail",
+            # SSM runs these with /bin/sh, which is dash on Ubuntu. dash has
+            # no "pipefail", so keep every command POSIX.
+            "set -eu",
             f"if [ ! -d {PREV_DIR} ]; then echo 'no previous release on disk'; exit 1; fi",
             f"rm -rf {APP_DIR} && cp -a {PREV_DIR} {APP_DIR}",
             f"cd {APP_DIR}",
