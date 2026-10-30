@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Folder Two</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <main class="card">
+    <p class="eyebrow">multi-folder-domain</p>
+    <h1>Folder Two</h1>
+    <p class="lede">
+      This page is served from <code>folder-two/</code> on a single EC2
+      instance. Caddy matched the hostname you typed and routed here.
+    </p>
+
+    <dl class="facts">
+      <div><dt>Folder</dt><dd>folder-two</dd></div>
+      <div><dt>Host</dt><dd id="host">—</dd></div>
+      <div><dt>TLS</dt><dd id="tls">—</dd></div>
+    </dl>
+
+    <p class="foot">Add a sibling folder with its own <code>site.json</code> and it gets its own domain.</p>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>

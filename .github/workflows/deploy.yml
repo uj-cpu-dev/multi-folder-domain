@@ -1,0 +1,134 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "What to run"
+        type: choice
+        default: deploy
+        options: [deploy, plan, status, rollback]
+      folder_logs:
+        description: "Folder name, to fetch its container logs instead"
+        type: string
+        default: ""
+
+# Two pushes landing together would both see "no instance" and launch one each.
+# This queues them instead of racing.
+concurrency:
+  group: deploy-multi-folder-domain
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      # Everything else lives in config.json, committed with the code.
+      # No repository variables to set, nothing to remember in a web form.
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Read the region out of config.json
+        run: |
+          REGION=$(python -c "import json;print(json.load(open('config.json')).get('region','us-east-1'))")
+          echo "AWS_REGION=$REGION"         >> "$GITHUB_ENV"
+          echo "AWS_DEFAULT_REGION=$REGION" >> "$GITHUB_ENV"
+          echo "region: $REGION"
+
+      - name: Check the credentials actually arrived
+        run: |
+          if [ -z "${AWS_ACCESS_KEY_ID}" ] || [ -z "${AWS_SECRET_ACCESS_KEY}" ]; then
+            echo "::error::AWS_ACCESS_KEY / AWS_SECRET_ACCESS_KEY are not set on this repository."
+            exit 1
+          fi
+          pip install awscli --quiet
+          aws sts get-caller-identity
+
+      - name: Annotate any site.json problems (warnings only)
+        run: |
+          python - <<'PY'
+          import json, re, pathlib
+          host = re.compile(r"^(?=.{1,253}$)(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+$")
+          seen = {}
+          for m in sorted(pathlib.Path(".").glob("*/site.json")):
+              folder = m.parent.name
+              try:
+                  data = json.loads(m.read_text())
+              except json.JSONDecodeError as e:
+                  print(f"::warning file={m}::invalid JSON, this folder will be skipped: {e}")
+                  continue
+              names = [str(data.get("domain", "")).strip().lower()]
+              names += [str(a).strip().lower() for a in data.get("aliases", [])]
+              if not names[0]:
+                  print(f"::warning file={m}::no domain set, this folder will be skipped")
+              for n in filter(None, names):
+                  if not host.match(n):
+                      print(f"::warning file={m}::'{n}' is not a valid hostname, this folder will be skipped")
+                  if n in seen:
+                      print(f"::warning file={m}::'{n}' is also claimed by {seen[n]}/, both will be skipped")
+                  seen[n] = folder
+              print(f"  {folder:<20} {', '.join(filter(None, names)) or '(no domain)'}")
+          PY
+        # Warnings only. deploy.py is the single source of truth: it skips bad
+        # folders, deploys the good ones, and exits non-zero at the end so the
+        # run still shows red. Failing here would stop healthy sites deploying
+        # because of one half-written folder.
+
+      - name: Container logs
+        if: ${{ inputs.folder_logs != '' }}
+        run: python deploy.py --logs "${{ inputs.folder_logs }}"
+
+      - name: Plan
+        if: ${{ inputs.folder_logs == '' && inputs.action == 'plan' }}
+        run: python deploy.py --plan
+
+      - name: Status
+        if: ${{ inputs.folder_logs == '' && inputs.action == 'status' }}
+        run: python deploy.py --status
+
+      - name: Rollback
+        if: ${{ inputs.folder_logs == '' && inputs.action == 'rollback' }}
+        run: python deploy.py --rollback
+
+      - name: Deploy
+        if: ${{ inputs.folder_logs == '' && (inputs.action == 'deploy' || inputs.action == '') }}
+        run: python deploy.py
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### multi-folder-domain"
+            echo ""
+            echo "settings from \`config.json\`:"
+            echo ""
+            echo '```json'
+            python -c "import json;d=json.load(open('config.json'));d.pop('_comment',None);print(json.dumps(d,indent=2))"
+            echo '```'
+            echo ""
+            echo "| folder | domain | image |"
+            echo "| --- | --- | --- |"
+            for f in */site.json; do
+              dir=$(dirname "$f")
+              dom=$(python -c "import json,sys;print(json.load(open(sys.argv[1]))['domain'])" "$f")
+              if [ -f "$dir/Dockerfile" ]; then img="own Dockerfile"; else img="static (nginx)"; fi
+              echo "| \`$dir\` | $dom | $img |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"

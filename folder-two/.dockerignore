@@ -1,0 +1,6 @@
+site.json
+Dockerfile
+.dockerignore
+.git
+.DS_Store
+node_modules
