@@ -1307,8 +1307,30 @@ def main() -> None:
 
     if ACME_STAGING:
         log("")
-        log("ACME_STAGING is ON — certificates will be untrusted test ones.")
-        log("Turn it off once a real deploy has worked end to end.")
+        log("acme_staging is ON — certificates will be untrusted test ones.")
+        live = []
+        for site in sites:
+            for name in [site["domain"], *site["aliases"]]:
+                try:
+                    import socket
+                    if socket.gethostbyname(name):
+                        live.append(name)
+                except OSError:
+                    pass
+        if live:
+            log("")
+            log("  *** WARNING: these names already resolve, so the site is LIVE:")
+            for name in live[:6]:
+                log(f"      {name}")
+            log("")
+            log("  Test certificates on a live site are not a soft warning. This")
+            log("  config sends Strict-Transport-Security, so once a browser has")
+            log("  seen the site it will REFUSE to let a visitor click through a")
+            log("  certificate error at all. The site becomes unreachable.")
+            log("")
+            log('  If you did not mean this, set "acme_staging": false and push.')
+        else:
+            log("Turn it off once a real deploy has worked end to end.")
 
     sg_id = ensure_security_group(args.plan)
     profile = ensure_instance_profile(args.plan)

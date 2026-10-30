@@ -5,7 +5,7 @@
   "instance_type": "t3.micro",
   "disk_gb": 20,
   "acme_email": "",
-  "acme_staging": true,
+  "acme_staging": false,
   "manage_dns": false,
   "fail_on_skipped": true,
   "server_off": false,
