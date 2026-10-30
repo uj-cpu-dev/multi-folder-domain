@@ -112,14 +112,14 @@ jobs:
         run: python deploy.py
 
       # ---------------------------------------------------------------------
-      # Certificates. Runs after a deploy even if the deploy failed, and can
-      # also be run on its own from the Actions tab with action = certs.
-      # Answers three questions without you logging into anything:
-      #   1. which certificate authority is this configured to use
-      #   2. what did Caddy itself say it did
-      #   3. which certificate is actually being served right now
+      # Certificates and DNS. Runs after a deploy even if the deploy failed,
+      # and can be run on its own from the Actions tab with action = certs.
+      #
+      # Caddy can only get a certificate if the certificate authority can
+      # reach THIS server at the domain. So the first thing to check is never
+      # the certificate — it is where the name actually points.
       # ---------------------------------------------------------------------
-      - name: Certificates — configured, obtained, served
+      - name: Certificates and DNS — where the name points, what is served
         if: ${{ always() && inputs.folder_logs == '' && (inputs.action == 'deploy' || inputs.action == 'certs' || inputs.action == '') }}
         continue-on-error: true
         run: |
@@ -127,7 +127,27 @@ jobs:
           OUT=cert-report.txt
           : > "$OUT"
 
+          # Every certificate probe below uses -k on purpose. Without it, curl
+          # aborts the handshake on an untrusted certificate and prints NOTHING
+          # about it — which is exactly the case this step exists to diagnose.
+          # Whether a normal client trusts it is tested separately, without -k.
+
+          SERVER_IP=$(python - <<'PY'
+          import importlib.util
+          spec = importlib.util.spec_from_file_location("deploy", "deploy.py")
+          m = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(m)
+          inst = m.find_instance()
+          print((inst or {}).get("PublicIpAddress", ""))
+          PY
+          )
+
           {
+            echo "=== 0. THE SERVER =============================================="
+            echo "  public IP    : ${SERVER_IP:-UNKNOWN}"
+            echo "  Every domain below must resolve to exactly this address."
+
+            echo ""
             echo "=== 1. CONFIGURED ==============================================="
             python - <<'PY'
           import json, pathlib
@@ -142,14 +162,7 @@ jobs:
           PY
 
             echo ""
-            echo "=== 2. WHAT CADDY SAID ========================================="
-            python deploy.py --logs caddy 2>&1 \
-              | grep -iE 'certificate|acme|tls|issuer|challenge|error|obtain' \
-              | tail -40 \
-              || echo "  (no certificate lines in the last 100 log lines)"
-
-            echo ""
-            echo "=== 3. WHAT IS ACTUALLY BEING SERVED ==========================="
+            echo "=== 2. DNS AND REACHABILITY ===================================="
             DOMAINS=$(python - <<'PY'
           import json, pathlib
           out = []
@@ -166,40 +179,109 @@ jobs:
           print(" ".join(out))
           PY
           )
-            if [ -z "$DOMAINS" ]; then
-              echo "  (no domains configured yet)"
-            fi
+            [ -z "$DOMAINS" ] && echo "  (no domains configured yet)"
+
+            DNS_PROBLEM=0
+            FIRST_ISSUER=""
+            FIRST_CODE=""
+
             for d in $DOMAINS; do
               echo ""
               echo "  --- $d"
+
+              ips=$(getent ahostsv4 "$d" 2>/dev/null | awk '{print $1}' | sort -u | tr '\n' ' ')
+              ips=$(echo $ips)
+              if [ -z "$ips" ]; then
+                echo "      dns          : DOES NOT RESOLVE"
+                DNS_PROBLEM=1
+              elif [ -n "$SERVER_IP" ] && [ "$ips" = "$SERVER_IP" ]; then
+                echo "      dns          : $ips   OK"
+              else
+                echo "      dns          : $ips"
+                echo "      *** MISMATCH : expected ${SERVER_IP:-?} — this name does NOT point at your server"
+                DNS_PROBLEM=1
+              fi
+
+              # Port 80 is what the http-01 challenge uses. A registrar parking
+              # page or URL-forwarding record shows up here as a redirect to an
+              # address that is not the server.
+              http=$(curl -sS -o /dev/null -m 20 \
+                      -w 'reached %{remote_ip}  status %{http_code}  redirect "%{redirect_url}"' \
+                      "http://$d/.well-known/acme-challenge/probe" 2>/dev/null \
+                      || echo "could not connect")
+              echo "      port 80      : $http"
+              echo "                     (404 from YOUR server is normal here;"
+              echo "                      a redirect, or any other IP, is not)"
+
               code=$(curl -ksS -o /dev/null -m 20 -w '%{http_code}' "https://$d" 2>/dev/null || echo "000")
-              echo "      http status  : $code   (000 means it could not connect at all)"
-              curl -sv -o /dev/null -m 20 "https://$d" 2>&1 \
-                | grep -iE 'subject:|issuer:|expire date|SSL certificate verify|start date' \
-                | sed 's/^\*//; s/^/     /' \
-                || echo "      (no TLS details — connection may have failed)"
+              echo "      https status : $code   (000 = could not connect at all)"
+
+              if curl -sS -o /dev/null -m 20 "https://$d" >/dev/null 2>&1; then
+                echo "      trusted      : YES — a normal browser accepts this"
+              else
+                echo "      trusted      : NO  — browsers will warn"
+              fi
+
+              details=$(curl -ksv -o /dev/null -m 20 "https://$d" 2>&1 \
+                        | grep -iE 'subject:|issuer:|start date|expire date' || true)
+              if [ -n "$details" ]; then
+                echo "$details" | sed 's/^\*//; s/^/     /'
+              else
+                echo "      (no certificate presented)"
+              fi
+
+              if [ -z "$FIRST_ISSUER$FIRST_CODE" ]; then
+                FIRST_ISSUER=$(printf '%s' "$details" | grep -i 'issuer:' | head -1 || true)
+                FIRST_CODE="$code"
+              fi
             done
 
             echo ""
+            echo "=== 3. WHAT CADDY SAID ========================================="
+            python deploy.py --logs caddy 2>&1 \
+              | grep -iE 'certificate|acme|tls\.|issuer|challenge|error|obtain|unauthorized' \
+              | tail -40 \
+              || echo "  (no certificate lines in the last 100 log lines)"
+
+            echo ""
             echo "=== VERDICT ===================================================="
-            if [ -n "$DOMAINS" ]; then
-              set -- $DOMAINS
-              ISS=$(curl -sv -o /dev/null -m 20 "https://$1" 2>&1 | grep -i 'issuer:' | head -1 || true)
-              case "$ISS" in
-                *STAGING*) echo "  Serving a STAGING certificate."
-                           echo "  If config.json says acme_staging: false, the Caddyfile on the"
-                           echo "  server has not been reloaded — check section 2 above." ;;
-                *"Let's Encrypt"*) echo "  Serving a real Let's Encrypt certificate. Nothing to do." ;;
-                "")        echo "  Could not read an issuer. Either DNS is not pointed here yet,"
-                           echo "  or Caddy is not answering on 443. Check section 2." ;;
-                *)         echo "  Issuer: $ISS" ;;
+            if [ -z "$DOMAINS" ]; then
+              echo "  Nothing to check."
+            elif [ "$DNS_PROBLEM" = "1" ]; then
+              echo "  DNS IS THE PROBLEM. Fix this before looking at anything else."
+              echo ""
+              echo "  One or more names above do not resolve to ${SERVER_IP:-your server}."
+              echo "  Let's Encrypt has to reach THIS machine at that name to issue a"
+              echo "  certificate, so until every A record points here, no certificate"
+              echo "  can ever be issued and the errors in section 3 are a symptom,"
+              echo "  not the cause."
+              echo ""
+              echo "  At your registrar, for EVERY name listed above:"
+              echo "    - delete any URL Redirect / forwarding record"
+              echo "    - delete any CNAME to a parking page"
+              echo "    - add a plain A record pointing to ${SERVER_IP:-the IP above}"
+            elif [ "$FIRST_CODE" = "000" ]; then
+              echo "  DNS is right but nothing answers on 443. Check section 3."
+            else
+              case "$FIRST_ISSUER" in
+                *STAGING*)
+                  echo "  Serving a STAGING certificate."
+                  echo "  If section 1 says acme_staging: false, the Caddyfile on the"
+                  echo "  server has not been reloaded — check section 3." ;;
+                *"Let's Encrypt"*)
+                  echo "  Serving a real Let's Encrypt certificate. Nothing to do." ;;
+                "")
+                  echo "  The site answered ($FIRST_CODE) but presented no readable"
+                  echo "  certificate. Check section 3." ;;
+                *)
+                  echo " $FIRST_ISSUER" ;;
               esac
             fi
           } 2>&1 | tee -a "$OUT"
 
           {
             echo ""
-            echo "<details><summary>Certificate report</summary>"
+            echo "<details><summary>Certificate and DNS report</summary>"
             echo ""
             echo '```'
             cat "$OUT"
