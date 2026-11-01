@@ -3,13 +3,469 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Orsa Parcels</title>
+    <title>Orsa Parcels — UK &amp; EU courier</title>
+    <meta
+      name="description"
+      content="Collection from your door, tracked the whole way, delivered when we said it would be. Next day, economy and pallet freight across the UK and EU."
+    />
+    <meta name="theme-color" content="#0b0d10" id="themecolor" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="index.css" />
+
+    <!-- Runs before the first paint so a chosen theme never flashes the other one. -->
+    <script>
+      try {
+        var t = localStorage.getItem("orsa-theme");
+        if (t === "light" || t === "dark")
+          document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
   </head>
+
   <body>
-    <main>
-      <h1>Welcome to Orsa Parcels</h1>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="nav" id="top">
+      <div class="shell nav__inner">
+        <a class="brand" href="#top" aria-label="Orsa Parcels, home">
+          <span class="brand__mark" aria-hidden="true">
+            <svg
+              viewBox="0 0 32 32"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.1"
+              stroke-linejoin="round"
+              stroke-linecap="round"
+            >
+              <path d="M16 3.5 28 10v12L16 28.5 4 22V10z" />
+              <path d="M4 10l12 6.5L28 10M16 16.5V28.5" />
+            </svg>
+          </span>
+          <span class="brand__word"
+            >Orsa<span class="brand__thin">Parcels</span></span
+          >
+        </a>
+
+        <nav class="nav__links" aria-label="Primary">
+          <a href="#services">Services</a>
+          <a href="#how">How it works</a>
+          <a href="#coverage">Coverage</a>
+          <a href="#track">Track</a>
+        </nav>
+
+        <div class="nav__actions">
+          <button
+            class="theme"
+            id="theme"
+            type="button"
+            aria-label="Switch to light mode"
+          >
+            <span class="theme__icons" aria-hidden="true">
+              <svg
+                class="theme__sun"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <circle cx="12" cy="12" r="4.4" />
+                <path
+                  d="M12 2.6v2.2M12 19.2v2.2M21.4 12h-2.2M4.8 12H2.6M18.6 5.4l-1.6 1.6M7 17l-1.6 1.6M18.6 18.6 17 17M7 7 5.4 5.4"
+                />
+              </svg>
+              <svg
+                class="theme__moon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linejoin="round"
+                stroke-linecap="round"
+              >
+                <path
+                  d="M20 14.2A8.4 8.4 0 1 1 9.8 4a6.8 6.8 0 0 0 10.2 10.2z"
+                />
+              </svg>
+            </span>
+          </button>
+
+          <a class="btn btn--ghost" href="#track">Track a parcel</a>
+          <a class="btn btn--solid" href="#quote">Get a quote</a>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- ─────────────────────────  HERO  ───────────────────────── -->
+      <section class="hero">
+        <div class="hero__glow" aria-hidden="true"></div>
+        <div class="hero__grid" aria-hidden="true"></div>
+
+        <div class="shell hero__inner">
+          <p class="eyebrow">
+            <span class="dot"></span> Collecting across the UK &amp; EU, seven
+            days a week
+          </p>
+
+          <h1 class="hero__title">
+            Parcels that arrive
+            <span class="hero__accent">when we said</span>
+            they would.
+          </h1>
+
+          <p class="hero__lede">
+            Door-to-door collection, one tracking number from pickup to
+            signature, and a person on the end of the phone when something needs
+            a human.
+          </p>
+
+          <!-- Submits to the tracking screen in this same site: /tracking/ -->
+          <form
+            class="track"
+            id="track"
+            action="/tracking/"
+            method="get"
+            novalidate
+          >
+            <label class="track__label" for="trackno">Tracking number</label>
+            <div class="track__field">
+              <span class="track__prefix" aria-hidden="true">ORS</span>
+              <input
+                class="track__input"
+                id="trackno"
+                name="n"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="0000 0000 0000"
+                aria-describedby="trackhint"
+              />
+              <button class="track__go" type="submit">
+                Track
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M4 10h11M11 5.5 15.5 10 11 14.5" />
+                </svg>
+              </button>
+            </div>
+            <p class="track__hint" id="trackhint">
+              Your number is on the collection receipt and in the confirmation
+              email.
+            </p>
+          </form>
+
+          <ul class="hero__facts">
+            <li><strong>3</strong><span>service levels</span></li>
+            <li><strong>7</strong><span>days a week</span></li>
+            <li>
+              <strong>UK&nbsp;+&nbsp;EU</strong
+              ><span>collection &amp; delivery</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ─────────────────────────  SERVICES  ───────────────────────── -->
+      <section class="section" id="services">
+        <div class="shell">
+          <header class="section__head">
+            <p class="kicker">Services</p>
+            <h2 class="section__title">Three ways to send it.</h2>
+            <p class="section__lede">
+              Same collection, same tracking, same people. The difference is how
+              fast it moves.
+            </p>
+          </header>
+
+          <div class="cards">
+            <article class="card">
+              <p class="card__tag">Next day</p>
+              <h3 class="card__title">Overnight</h3>
+              <p class="card__body">
+                Booked before the afternoon cut-off, collected the same day,
+                delivered the next working day. For the ones that can't wait.
+              </p>
+              <ul class="card__list">
+                <li>Pre-noon option available</li>
+                <li>Signature on delivery</li>
+                <li>Live tracking from collection</li>
+              </ul>
+              <p class="card__price">
+                <span>from</span> £8.40 <small>/ parcel</small>
+              </p>
+            </article>
+
+            <article class="card card--feature">
+              <p class="card__tag">Most used</p>
+              <h3 class="card__title">Economy</h3>
+              <p class="card__body">
+                Two to three working days, the same care, noticeably less money.
+                What most of our customers send most of the time.
+              </p>
+              <ul class="card__list">
+                <li>Two to three working days</li>
+                <li>Signature on delivery</li>
+                <li>Live tracking from collection</li>
+              </ul>
+              <p class="card__price">
+                <span>from</span> £4.90 <small>/ parcel</small>
+              </p>
+            </article>
+
+            <article class="card">
+              <p class="card__tag">Heavy &amp; bulk</p>
+              <h3 class="card__title">Pallet &amp; freight</h3>
+              <p class="card__body">
+                Quarter, half and full pallets, tail-lift where you need it.
+                Quoted properly rather than guessed from a weight band.
+              </p>
+              <ul class="card__list">
+                <li>Tail-lift on request</li>
+                <li>Booked delivery windows</li>
+                <li>Dedicated contact per account</li>
+              </ul>
+              <p class="card__price"><span>quoted</span> per load</p>
+            </article>
+          </div>
+          <!-- Replace the prices above with your real rate card. -->
+        </div>
+      </section>
+
+      <!-- ─────────────────────────  HOW IT WORKS  ───────────────────────── -->
+      <section class="section section--alt" id="how">
+        <div class="shell">
+          <header class="section__head">
+            <p class="kicker">How it works</p>
+            <h2 class="section__title">
+              Three steps, and then it's our problem.
+            </h2>
+          </header>
+
+          <ol class="steps">
+            <li class="step">
+              <p class="step__no">01</p>
+              <h3 class="step__title">Book it</h3>
+              <p class="step__body">
+                Tell us where it's going and roughly what it weighs. You get a
+                price before you commit, not after.
+              </p>
+            </li>
+            <li class="step">
+              <p class="step__no">02</p>
+              <h3 class="step__title">We collect</h3>
+              <p class="step__body">
+                From your door, your unit or your shop, in a window you chose.
+                No printing labels at the post office.
+              </p>
+            </li>
+            <li class="step">
+              <p class="step__no">03</p>
+              <h3 class="step__title">It arrives</h3>
+              <p class="step__body">
+                One tracking number the whole way, a photo or signature at the
+                door, and a real person if it goes sideways.
+              </p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- ─────────────────────────  COVERAGE  ───────────────────────── -->
+      <section class="section" id="coverage">
+        <div class="shell coverage">
+          <div class="coverage__copy">
+            <p class="kicker">Coverage</p>
+            <h2 class="section__title">Mainland UK, Ireland and the EU.</h2>
+            <p class="section__lede">
+              Daily collections across England, Scotland and Wales, with
+              Northern Ireland, the Republic and the EU on scheduled services.
+              Highlands, islands and offshore postcodes are quoted individually
+              — we'd rather tell you the real price than surprise you with a
+              surcharge.
+            </p>
+            <a class="btn btn--solid btn--lg" href="#quote"
+              >Check your postcode</a
+            >
+          </div>
+
+          <ul class="coverage__list">
+            <li><span>GB</span> England, Scotland, Wales</li>
+            <li><span>NI</span> Northern Ireland</li>
+            <li><span>IE</span> Republic of Ireland</li>
+            <li><span>EU</span> Scheduled European services</li>
+            <li><span>IOM</span> Isle of Man &amp; Channel Islands</li>
+            <li><span>HI</span> Highlands &amp; Islands, quoted</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ─────────────────────────  CTA  ───────────────────────── -->
+      <section class="cta" id="quote">
+        <div class="cta__glow" aria-hidden="true"></div>
+        <div class="shell cta__inner">
+          <h2 class="cta__title">Send something this week.</h2>
+          <p class="cta__lede">
+            Tell us the postcode and the weight. We'll come back with a price,
+            not a range.
+          </p>
+          <div class="cta__actions">
+            <a
+              class="btn btn--solid btn--lg"
+              href="mailto:hello@orsaparcels.com"
+              >Get a quote</a
+            >
+            <a class="btn btn--ghost btn--lg" href="tel:+440000000000"
+              >Call us</a
+            >
+          </div>
+          <p class="cta__small">
+            Replace these with your real address and number.
+          </p>
+        </div>
+      </section>
     </main>
-    <script src="script.js"></script>
+
+    <footer class="foot">
+      <div class="shell foot__inner">
+        <div class="foot__brand">
+          <span class="brand__word"
+            >Orsa<span class="brand__thin">Parcels</span></span
+          >
+          <p>UK &amp; EU courier. Collection, tracking, delivery.</p>
+        </div>
+
+        <nav class="foot__cols" aria-label="Footer">
+          <div>
+            <h3>Services</h3>
+            <a href="#services">Next day</a>
+            <a href="#services">Economy</a>
+            <a href="#services">Pallet &amp; freight</a>
+          </div>
+          <div>
+            <h3>Company</h3>
+            <a href="#how">How it works</a>
+            <a href="#coverage">Coverage</a>
+            <a href="#quote">Get a quote</a>
+          </div>
+          <div>
+            <h3>Contact</h3>
+            <a href="mailto:hello@orsaparcels.com">hello@orsaparcels.com</a>
+            <a href="tel:+440000000000">+44 0000 000000</a>
+          </div>
+        </nav>
+      </div>
+
+      <div class="shell foot__base">
+        <p>&copy; 2026 Orsa Parcels</p>
+        <p class="foot__mono">orsaparcels.com</p>
+      </div>
+    </footer>
+
+    <!-- ─────────────────────────────────────────────────────────────
+     The only JavaScript on the page. Two jobs:
+       1. the light / dark switch, remembered between visits
+       2. putting the cursor in the tracking box when someone
+          clicks "Track a parcel"
+     Everything else still works with this file deleted.
+     ───────────────────────────────────────────────────────────── -->
+    <script>
+      (function () {
+        "use strict";
+
+        var root = document.documentElement;
+        var btn = document.getElementById("theme");
+        var meta = document.getElementById("themecolor");
+        var calm = matchMedia("(prefers-reduced-motion: reduce)");
+        var SHADE = { dark: "#0b0d10", light: "#f7f8fa" };
+
+        function current() {
+          if (root.dataset.theme) return root.dataset.theme;
+          return matchMedia("(prefers-color-scheme: light)").matches
+            ? "light"
+            : "dark";
+        }
+
+        function apply(mode) {
+          root.dataset.theme = mode;
+          if (meta) meta.setAttribute("content", SHADE[mode]);
+          btn.setAttribute(
+            "aria-label",
+            mode === "dark" ? "Switch to light mode" : "Switch to dark mode",
+          );
+          try {
+            localStorage.setItem("orsa-theme", mode);
+          } catch (e) {}
+        }
+
+        apply(current());
+
+        btn.addEventListener("click", function () {
+          var next = current() === "dark" ? "light" : "dark";
+
+          // No View Transitions, or the visitor asked for less motion: just swap.
+          if (!document.startViewTransition || calm.matches) {
+            apply(next);
+            return;
+          }
+
+          // Otherwise the new theme wipes in as a circle growing out of the button.
+          var box = btn.getBoundingClientRect();
+          var x = box.left + box.width / 2;
+          var y = box.top + box.height / 2;
+          var reach = Math.hypot(
+            Math.max(x, innerWidth - x),
+            Math.max(y, innerHeight - y),
+          );
+
+          document
+            .startViewTransition(function () {
+              apply(next);
+            })
+            .ready.then(function () {
+              root.animate(
+                {
+                  clipPath: [
+                    "circle(0px at " + x + "px " + y + "px)",
+                    "circle(" + reach + "px at " + x + "px " + y + "px)",
+                  ],
+                },
+                {
+                  duration: 560,
+                  easing: "cubic-bezier(.2,.7,.25,1)",
+                  pseudoElement: "::view-transition-new(root)",
+                },
+              );
+            });
+        });
+
+        // "Track a parcel" should land in the box, not near it.
+        var field = document.getElementById("trackno");
+        Array.prototype.forEach.call(
+          document.querySelectorAll('a[href="#track"]'),
+          function (link) {
+            link.addEventListener("click", function () {
+              setTimeout(function () {
+                field.focus({ preventScroll: true });
+              }, 420);
+            });
+          },
+        );
+      })();
+    </script>
   </body>
 </html>

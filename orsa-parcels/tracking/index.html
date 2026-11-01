@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Tracking — Orsa Parcels</title>
+    <meta name="description" content="Where your parcel is right now." />
+    <meta name="theme-color" content="#0b0d10" id="themecolor" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="index.css" />
+
+    <script>
+      try {
+        var t = localStorage.getItem("orsa-theme");
+        if (t === "light" || t === "dark")
+          document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
+  </head>
+
+  <body>
+    <!-- Nothing below is written by hand. Every word, number and colour is
+     read from data.json and poured into these slots. -->
+
+    <header class="bar">
+      <a class="brand" href="/" aria-label="Home">
+        <span class="brand__mark" aria-hidden="true">
+          <svg
+            viewBox="0 0 32 32"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.1"
+            stroke-linejoin="round"
+            stroke-linecap="round"
+          >
+            <path d="M16 3.5 28 10v12L16 28.5 4 22V10z" />
+            <path d="M4 10l12 6.5L28 10M16 16.5V28.5" />
+          </svg>
+        </span>
+        <span class="brand__word"
+          ><span data-slot="brandName">Orsa</span
+          ><span class="brand__thin" data-slot="brandThin">Parcels</span></span
+        >
+      </a>
+
+      <div class="bar__ref">
+        <span class="bar__refLabel" data-slot="refLabel">Tracking number</span>
+        <span class="bar__refNo" data-slot="reference">—</span>
+      </div>
+
+      <button
+        class="theme"
+        id="theme"
+        type="button"
+        aria-label="Switch to light mode"
+      >
+        <span class="theme__icons" aria-hidden="true">
+          <svg
+            class="theme__sun"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <circle cx="12" cy="12" r="4.4" />
+            <path
+              d="M12 2.6v2.2M12 19.2v2.2M21.4 12h-2.2M4.8 12H2.6M18.6 5.4l-1.6 1.6M7 17l-1.6 1.6M18.6 18.6 17 17M7 7 5.4 5.4"
+            />
+          </svg>
+          <svg
+            class="theme__moon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linejoin="round"
+            stroke-linecap="round"
+          >
+            <path d="M20 14.2A8.4 8.4 0 1 1 9.8 4a6.8 6.8 0 0 0 10.2 10.2z" />
+          </svg>
+        </span>
+      </button>
+    </header>
+
+    <main class="stage" id="stage" aria-busy="true">
+      <!-- left: where it is -->
+      <section class="panel panel--status">
+        <p class="tag" id="livetag">
+          <span class="dot" aria-hidden="true"></span>
+          <span data-slot="liveWord">Live</span>
+        </p>
+
+        <div class="statusBlock">
+          <h1 class="status" data-slot="status">Loading…</h1>
+          <p class="statusNote" data-slot="statusNote"></p>
+        </div>
+
+        <div class="eta">
+          <span class="eta__label" data-slot="etaLabel"></span>
+          <strong class="eta__time" data-slot="eta"></strong>
+        </div>
+
+        <div class="prog">
+          <div
+            class="prog__track"
+            role="progressbar"
+            id="progbar"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+            aria-label="Delivery progress"
+          >
+            <div class="prog__fill" id="progfill"></div>
+          </div>
+          <ol class="prog__steps" id="steps"></ol>
+        </div>
+      </section>
+
+      <!-- right top: the facts -->
+      <section class="panel panel--facts">
+        <dl class="facts" id="facts"></dl>
+      </section>
+
+      <!-- right bottom: the journey -->
+      <section class="panel panel--events">
+        <h2 class="panel__title" data-slot="eventsTitle">Journey</h2>
+        <ol class="events" id="events"></ol>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <p class="foot__note" data-slot="footer"></p>
+      <p class="foot__help">
+        <span data-slot="helpLine"></span>
+        <a id="helpmail" href="#"></a>
+        <span class="foot__sep" aria-hidden="true">·</span>
+        <a id="helptel" href="#"></a>
+      </p>
+    </footer>
+
+    <!-- shown only if data.json can't be read -->
+    <div class="oops" id="oops" hidden>
+      <div class="oops__box">
+        <h2>data.json didn't load</h2>
+        <p id="oopswhy"></p>
+        <p class="oops__hint">
+          A browser won't read a local file over <code>file://</code>. Serve the
+          folder — Live Server, or the container on the server — and it will
+          work.
+        </p>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        "use strict";
+
+        var root = document.documentElement;
+        var calm = matchMedia("(prefers-reduced-motion: reduce)");
+
+        /* ---------- theme switch (same as the landing page) ---------- */
+        var btn = document.getElementById("theme");
+        var meta = document.getElementById("themecolor");
+        var SHADE = { dark: "#0b0d10", light: "#f7f8fa" };
+
+        function current() {
+          if (root.dataset.theme) return root.dataset.theme;
+          return matchMedia("(prefers-color-scheme: light)").matches
+            ? "light"
+            : "dark";
+        }
+        function applyTheme(mode) {
+          root.dataset.theme = mode;
+          if (meta) meta.setAttribute("content", SHADE[mode]);
+          btn.setAttribute(
+            "aria-label",
+            mode === "dark" ? "Switch to light mode" : "Switch to dark mode",
+          );
+          try {
+            localStorage.setItem("orsa-theme", mode);
+          } catch (e) {}
+        }
+        applyTheme(current());
+
+        btn.addEventListener("click", function () {
+          var next = current() === "dark" ? "light" : "dark";
+          if (!document.startViewTransition || calm.matches) {
+            applyTheme(next);
+            return;
+          }
+          var box = btn.getBoundingClientRect();
+          var x = box.left + box.width / 2,
+            y = box.top + box.height / 2;
+          var reach = Math.hypot(
+            Math.max(x, innerWidth - x),
+            Math.max(y, innerHeight - y),
+          );
+          document
+            .startViewTransition(function () {
+              applyTheme(next);
+            })
+            .ready.then(function () {
+              root.animate(
+                {
+                  clipPath: [
+                    "circle(0px at " + x + "px " + y + "px)",
+                    "circle(" + reach + "px at " + x + "px " + y + "px)",
+                  ],
+                },
+                {
+                  duration: 560,
+                  easing: "cubic-bezier(.2,.7,.25,1)",
+                  pseudoElement: "::view-transition-new(root)",
+                },
+              );
+            });
+        });
+
+        /* ---------- helpers ---------- */
+        function slot(name, text) {
+          var nodes = document.querySelectorAll('[data-slot="' + name + '"]');
+          for (var i = 0; i < nodes.length; i++) nodes[i].textContent = text;
+        }
+        function el(tag, cls, text) {
+          var n = document.createElement(tag);
+          if (cls) n.className = cls;
+          if (text !== undefined) n.textContent = text;
+          return n;
+        }
+
+        /* ---------- the whole page, from the file ---------- */
+        function render(d) {
+          var brand = d.brand || {};
+          var parcel = d.parcel || {};
+          var steps = d.steps || [];
+          var help = d.help || {};
+
+          document.title =
+            (parcel.reference || "Tracking") +
+            " — " +
+            (brand.name || "") +
+            (brand.nameThin || "");
+
+          if (brand.accent) root.style.setProperty("--acid", brand.accent);
+          if (brand.accentDeep)
+            root.style.setProperty("--acid-deep", brand.accentDeep);
+          if (brand.accentInk)
+            root.style.setProperty("--acid-ink", brand.accentInk);
+
+          slot("brandName", brand.name || "");
+          slot("brandThin", brand.nameThin || "");
+          slot("refLabel", parcel.label || "Tracking number");
+          slot("reference", parcel.reference || "—");
+
+          // If someone arrived from the search box on the landing page, show the
+          // number they typed rather than the one sitting in data.json.
+          var typed = new URLSearchParams(location.search).get("n");
+          if (typed && typed.trim()) {
+            typed = typed.trim();
+            slot("reference", /^ORS/i.test(typed) ? typed : "ORS " + typed);
+          }
+          slot("status", parcel.status || "");
+          slot("statusNote", parcel.statusNote || "");
+          slot("etaLabel", parcel.etaLabel || "");
+          slot("eta", parcel.eta || "");
+          slot("eventsTitle", d.eventsTitle || "Journey");
+          slot("footer", d.footer || "");
+          slot("helpLine", help.line || "");
+          slot("liveWord", parcel.liveWord || "Live");
+
+          document.getElementById("livetag").hidden = parcel.live === false;
+
+          var mail = document.getElementById("helpmail");
+          var tel = document.getElementById("helptel");
+          mail.textContent = help.email || "";
+          mail.href = "mailto:" + (help.email || "");
+          tel.textContent = help.phone || "";
+          tel.href = "tel:" + String(help.phone || "").replace(/\s+/g, "");
+
+          /* progress --------------------------------------------------- */
+          var at = Math.max(
+            0,
+            Math.min(Number(parcel.currentStep) || 0, steps.length - 1),
+          );
+          var pct = steps.length > 1 ? (at / (steps.length - 1)) * 100 : 0;
+
+          var list = document.getElementById("steps");
+          list.textContent = "";
+          steps.forEach(function (s, i) {
+            var li = el(
+              "li",
+              "pstep" + (i < at ? " is-done" : i === at ? " is-now" : ""),
+            );
+            li.appendChild(el("span", "pstep__pip"));
+            li.appendChild(el("span", "pstep__label", s.label || ""));
+            li.appendChild(el("span", "pstep__at", s.at || ""));
+            list.appendChild(li);
+          });
+
+          var bar = document.getElementById("progbar");
+          bar.setAttribute("aria-valuenow", Math.round(pct));
+          bar.setAttribute(
+            "aria-valuetext",
+            (steps[at] && steps[at].label) || "",
+          );
+          // next frame, so the width animates from 0 instead of starting there
+          requestAnimationFrame(function () {
+            document.getElementById("progfill").style.inlineSize = pct + "%";
+          });
+
+          /* facts ------------------------------------------------------ */
+          var facts = document.getElementById("facts");
+          facts.textContent = "";
+          (d.details || []).forEach(function (row) {
+            // dt and dd wrapped together, so a label can never drift away
+            // from its value when the grid reflows.
+            var pair = el("div", "facts__row");
+            pair.appendChild(el("dt", "facts__k", row.label || ""));
+            pair.appendChild(el("dd", "facts__v", row.value || ""));
+            facts.appendChild(pair);
+          });
+
+          /* journey ---------------------------------------------------- */
+          var events = document.getElementById("events");
+          events.textContent = "";
+          (d.events || []).forEach(function (e, i) {
+            var li = el("li", "event" + (i === 0 ? " is-latest" : ""));
+            var head = el("p", "event__head");
+            head.appendChild(el("span", "event__time", e.time || ""));
+            head.appendChild(el("span", "event__place", e.place || ""));
+            li.appendChild(head);
+            li.appendChild(el("p", "event__text", e.text || ""));
+            events.appendChild(li);
+          });
+
+          document.getElementById("stage").setAttribute("aria-busy", "false");
+          root.dataset.ready = "yes";
+        }
+
+        fetch("data.json", { cache: "no-store" })
+          .then(function (r) {
+            if (!r.ok)
+              throw new Error(
+                "The server answered " + r.status + " " + r.statusText,
+              );
+            return r.json();
+          })
+          .then(render)
+          .catch(function (err) {
+            document.getElementById("oopswhy").textContent = err.message;
+            document.getElementById("oops").hidden = false;
+          });
+      })();
+    </script>
+  </body>
+</html>

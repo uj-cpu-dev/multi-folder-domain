@@ -1,0 +1,77 @@
+{
+  "_comment": "Everything on the page comes from this file. Change it here, refresh, done. Nothing is hard-coded in index.html.",
+
+  "brand": {
+    "name": "Orsa",
+    "nameThin": "Parcels",
+    "site": "orsaparcels.com",
+    "accent": "oklch(0.88 0.21 128)",
+    "accentDeep": "oklch(0.72 0.18 130)",
+    "accentInk": "oklch(0.20 0.06 130)"
+  },
+
+  "parcel": {
+    "reference": "ORS 4821 9930 7744",
+    "label": "Tracking number",
+    "status": "Out for delivery",
+    "statusNote": "On the van with Daniel. He has 9 stops before yours.",
+    "live": true,
+    "etaLabel": "Expected today",
+    "eta": "14:00 – 16:00",
+    "currentStep": 3
+  },
+
+  "steps": [
+    { "label": "Booked", "at": "Mon 09:12" },
+    { "label": "Collected", "at": "Mon 16:40" },
+    { "label": "At the depot", "at": "Mon 23:05" },
+    { "label": "On the van", "at": "Tue 07:18" },
+    { "label": "Delivered", "at": "" }
+  ],
+
+  "details": [
+    { "label": "Service", "value": "Overnight" },
+    { "label": "From", "value": "Hackney, E8" },
+    { "label": "To", "value": "Didsbury, M20" },
+    { "label": "Weight", "value": "2.4 kg" },
+    { "label": "Pieces", "value": "1 of 1" },
+    { "label": "On arrival", "value": "Signature" }
+  ],
+
+  "eventsTitle": "Journey",
+  "events": [
+    {
+      "time": "Tue 07:18",
+      "place": "Manchester",
+      "text": "Loaded for delivery"
+    },
+    {
+      "time": "Tue 05:02",
+      "place": "Manchester",
+      "text": "Arrived at the local depot"
+    },
+    {
+      "time": "Mon 23:05",
+      "place": "Northampton",
+      "text": "Sorted at the national hub"
+    },
+    {
+      "time": "Mon 16:40",
+      "place": "London E8",
+      "text": "Collected from the sender"
+    },
+    {
+      "time": "Mon 09:12",
+      "place": "Online",
+      "text": "Booked and label created"
+    }
+  ],
+
+  "help": {
+    "line": "Something not right?",
+    "email": "hello@orsaparcels.com",
+    "phone": "+44 0000 000000"
+  },
+
+  "footer": "Updates land here within a few minutes of each scan."
+}
