@@ -127,6 +127,23 @@
           </aside>
         </div>
 
+        <!-- From → To. Only appears when data.json has a route block. -->
+        <div class="route" id="route" hidden>
+          <div class="route__end">
+            <span class="route__k" data-slot="fromLabel"></span>
+            <strong class="route__v" data-slot="from"></strong>
+          </div>
+          <div class="route__mid" aria-hidden="true">
+            <span class="route__line"></span>
+            <span class="route__via" data-slot="via"></span>
+            <span class="route__line"></span>
+          </div>
+          <div class="route__end route__end--to">
+            <span class="route__k" data-slot="toLabel"></span>
+            <strong class="route__v" data-slot="to"></strong>
+          </div>
+        </div>
+
         <div class="statusFoot">
           <div class="eta" id="eta">
             <span class="eta__label" data-slot="etaLabel"></span>
@@ -317,6 +334,19 @@
           document.getElementById("eta").hidden = !(
             parcel.eta || parcel.etaLabel
           );
+
+          var route = d.route || null;
+          var routeBox = document.getElementById("route");
+          if (route && (route.from || route.to)) {
+            slot("fromLabel", route.fromLabel || "From");
+            slot("from", route.from || "");
+            slot("toLabel", route.toLabel || "To");
+            slot("to", route.to || "");
+            slot("via", route.via || "");
+            routeBox.hidden = false;
+          } else {
+            routeBox.hidden = true;
+          }
 
           var mail = document.getElementById("helpmail");
           var tel = document.getElementById("helptel");

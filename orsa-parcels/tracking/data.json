@@ -125,10 +125,17 @@
     { "label": "Delivered", "short": "Done", "at": "", "state": "pending" }
   ],
 
+  "route": {
+    "_comment": "Fills the big space in the status panel. Delete the block and the space closes up.",
+    "fromLabel": "Collected from",
+    "from": "Hackney, E8",
+    "toLabel": "Going to",
+    "to": "Didsbury, M20",
+    "via": "via Northampton"
+  },
+
   "details": [
     { "label": "Service", "value": "Overnight" },
-    { "label": "From", "value": "Hackney, E8" },
-    { "label": "To", "value": "Didsbury, M20" },
     { "label": "Weight", "value": "2.4 kg" },
     { "label": "Pieces", "value": "1 of 1" },
     { "label": "On arrival", "value": "Signature" }

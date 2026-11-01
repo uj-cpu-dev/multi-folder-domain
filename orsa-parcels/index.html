@@ -314,28 +314,161 @@
         </div>
       </section>
 
-      <!-- ─────────────────────────  CTA  ───────────────────────── -->
+      <!-- ─────────────────────────  QUOTE FORM  ───────────────────────── -->
       <section class="cta" id="quote">
         <div class="cta__glow" aria-hidden="true"></div>
         <div class="shell cta__inner">
-          <h2 class="cta__title">Send something this week.</h2>
-          <p class="cta__lede">
-            Tell us the postcode and the weight. We'll come back with a price,
-            not a range.
-          </p>
-          <div class="cta__actions">
-            <a
-              class="btn btn--solid btn--lg"
-              href="mailto:hello@orsaparcels.com"
-              >Get a quote</a
-            >
-            <a class="btn btn--ghost btn--lg" href="tel:+440000000000"
-              >Call us</a
-            >
+          <div class="cta__copy">
+            <p class="kicker">Get a quote</p>
+            <h2 class="cta__title">Tell us the two postcodes.</h2>
+            <p class="cta__lede">
+              A price, not a range. Usually back within the hour on a working
+              day, and a person reads every one.
+            </p>
+            <ul class="cta__points">
+              <li>No account, no sign-up</li>
+              <li>The price we quote is the price we charge</li>
+              <li>Held for seven days</li>
+            </ul>
           </div>
-          <p class="cta__small">
-            Replace these with your real address and number.
-          </p>
+
+          <!-- ────────────────────────────────────────────────────────────
+           THE ONE THING TO CHANGE: action="" below.
+
+           The form posts normally, so it works with JavaScript off.
+           It needs somewhere to post to. Three honest options:
+
+             1. A form service — Formspree, Basin, Formcarry. Paste the
+                endpoint they give you into action=". Nothing else to do.
+             2. Your own endpoint, if you add a small API later.
+             3. Nothing yet — leave action="" and it posts back to this
+                page, which does nothing useful. Don't ship it like that.
+
+           Until you've set it, the form looks finished but goes nowhere.
+           ──────────────────────────────────────────────────────────── -->
+          <form class="quote" action="" method="post">
+            <div class="quote__pair">
+              <label class="field">
+                <span class="field__label">Collect from</span>
+                <input
+                  class="field__in"
+                  name="from"
+                  type="text"
+                  required
+                  placeholder="E8 3DL"
+                  autocomplete="postal-code"
+                  spellcheck="false"
+                />
+              </label>
+              <label class="field">
+                <span class="field__label">Deliver to</span>
+                <input
+                  class="field__in"
+                  name="to"
+                  type="text"
+                  required
+                  placeholder="M20 2RN"
+                  spellcheck="false"
+                />
+              </label>
+            </div>
+
+            <div class="quote__pair">
+              <label class="field">
+                <span class="field__label">Weight</span>
+                <span class="field__unit">
+                  <input
+                    class="field__in"
+                    name="weight"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    required
+                    placeholder="2.4"
+                    inputmode="decimal"
+                  />
+                  <span class="field__suffix" aria-hidden="true">kg</span>
+                </span>
+              </label>
+              <label class="field">
+                <span class="field__label">Service</span>
+                <span class="field__select">
+                  <select class="field__in" name="service">
+                    <option>Overnight</option>
+                    <option selected>Economy</option>
+                    <option>Pallet &amp; freight</option>
+                    <option>Not sure — tell me</option>
+                  </select>
+                  <svg
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M5.5 8 10 12.5 14.5 8" />
+                  </svg>
+                </span>
+              </label>
+            </div>
+
+            <label class="field">
+              <span class="field__label">Where shall we send the price?</span>
+              <input
+                class="field__in"
+                name="email"
+                type="email"
+                required
+                placeholder="you@company.com"
+                autocomplete="email"
+              />
+            </label>
+
+            <label class="field">
+              <span class="field__label"
+                >Anything we should know? <em>optional</em></span
+              >
+              <textarea
+                class="field__in"
+                name="notes"
+                rows="2"
+                placeholder="Fragile, tail-lift needed, goes out every Friday…"
+              ></textarea>
+            </label>
+
+            <!-- Spam bots fill in every field they find. People never see this
+             one, so anything in it means the submission isn't a person. -->
+            <p class="quote__trap" aria-hidden="true">
+              <label
+                >Leave this empty<input
+                  name="company_url"
+                  tabindex="-1"
+                  autocomplete="off"
+              /></label>
+            </p>
+
+            <button class="btn btn--solid btn--lg quote__go" type="submit">
+              Send it
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 10h11M11 5.5 15.5 10 11 14.5" />
+              </svg>
+            </button>
+
+            <p class="quote__small">
+              Rather talk? <a href="tel:+440000000000">+44 0000 000000</a>. We
+              don't pass your details to anyone.
+            </p>
+          </form>
         </div>
       </section>
     </main>

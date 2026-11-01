@@ -922,7 +922,7 @@
     color: var(--acid);
   }
 
-  /* --- cta --- */
+  /* --- quote --- */
   .cta {
     position: relative;
     isolation: isolate;
@@ -941,33 +941,203 @@
     );
   }
   .cta__inner {
-    padding-block: clamp(64px, 9vw, 120px);
+    padding-block: clamp(56px, 8vw, 104px);
     display: grid;
-    justify-items: center;
-    gap: 20px;
-    text-align: center;
+    gap: clamp(32px, 5vw, 64px);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    align-items: center;
+  }
+  @media (max-width: 900px) {
+    .cta__inner {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .cta__copy {
+    display: grid;
+    justify-items: start;
+    gap: 16px;
   }
   .cta__title {
-    font-size: clamp(2.1rem, 5.4vw, 3.9rem);
-    max-inline-size: 16ch;
+    font-size: clamp(2rem, 4.4vw, 3.2rem);
+    max-inline-size: 14ch;
   }
   .cta__lede {
     color: var(--ink-dim);
-    max-inline-size: 48ch;
+    max-inline-size: 42ch;
     font-size: 1.05rem;
   }
-  .cta__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    justify-content: center;
-    margin-block-start: 8px;
+  .cta__points {
+    display: grid;
+    gap: 10px;
+    margin-block-start: 4px;
   }
-  .cta__small {
-    font-family: var(--mono);
-    font-size: 11.5px;
-    color: var(--ink-faint);
+  .cta__points li {
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    gap: 10px;
+    align-items: start;
+    color: var(--ink-dim);
+    font-size: 15px;
+  }
+  .cta__points li::before {
+    content: "";
     margin-block-start: 6px;
+    justify-self: center;
+    inline-size: 7px;
+    block-size: 7px;
+    border-radius: 2px;
+    background: var(--acid);
+  }
+
+  /* --- the form --- */
+  .quote {
+    display: grid;
+    gap: 14px;
+    padding: clamp(22px, 2.6vw, 32px);
+    border: 1px solid var(--line);
+    border-radius: var(--r-xl);
+    background:
+      linear-gradient(
+        170deg,
+        color-mix(in oklab, var(--acid) 6%, transparent),
+        transparent 45%
+      ),
+      color-mix(in oklab, var(--surface) 92%, transparent);
+    backdrop-filter: blur(14px);
+    box-shadow: var(--shadow-lg);
+  }
+  .quote__pair {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: 1fr 1fr;
+  }
+  @media (max-width: 480px) {
+    .quote__pair {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .field {
+    display: grid;
+    gap: 7px;
+    min-inline-size: 0;
+  }
+  .field__label {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .field__label em {
+    font-style: normal;
+    opacity: 0.65;
+  }
+
+  .field__in {
+    inline-size: 100%;
+    min-inline-size: 0;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    background: color-mix(in oklab, var(--bg-deep) 55%, transparent);
+    color: var(--ink);
+    font-size: 15.5px;
+    font-family: inherit;
+    transition:
+      border-color 0.2s var(--ease),
+      box-shadow 0.2s var(--ease),
+      background 0.2s var(--ease);
+  }
+  .field__in::placeholder {
+    color: var(--ink-faint);
+    opacity: 0.7;
+  }
+  .field__in:focus {
+    outline: none;
+    border-color: color-mix(in oklab, var(--acid) 62%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--acid) 15%, transparent);
+    background: color-mix(in oklab, var(--bg-deep) 25%, transparent);
+  }
+  /* only scold once they have actually typed something wrong */
+  .field__in:user-invalid {
+    border-color: color-mix(in oklab, oklch(0.68 0.2 27) 60%, transparent);
+  }
+  textarea.field__in {
+    resize: vertical;
+    min-block-size: 64px;
+    line-height: 1.5;
+  }
+
+  .field__unit,
+  .field__select {
+    position: relative;
+    display: block;
+  }
+  .field__unit .field__in {
+    padding-inline-end: 44px;
+  }
+  .field__suffix {
+    position: absolute;
+    inset-inline-end: 14px;
+    inset-block-start: 50%;
+    translate: 0 -50%;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-faint);
+    pointer-events: none;
+  }
+  .field__select .field__in {
+    appearance: none;
+    padding-inline-end: 40px;
+    cursor: pointer;
+  }
+  .field__select svg {
+    position: absolute;
+    inset-inline-end: 13px;
+    inset-block-start: 50%;
+    translate: 0 -50%;
+    inline-size: 18px;
+    block-size: 18px;
+    color: var(--ink-faint);
+    pointer-events: none;
+  }
+
+  .quote__go {
+    inline-size: 100%;
+    margin-block-start: 4px;
+  }
+  .quote__go svg {
+    inline-size: 17px;
+    block-size: 17px;
+    transition: translate 0.22s var(--ease);
+  }
+  .quote__go:hover svg {
+    translate: 3px 0;
+  }
+
+  .quote__small {
+    font-size: 13px;
+    color: var(--ink-faint);
+    text-align: center;
+  }
+  .quote__small a {
+    color: var(--ink-dim);
+    border-block-end: 1px solid var(--line);
+  }
+  .quote__small a:hover {
+    color: var(--acid);
+  }
+
+  /* the honeypot. Off-screen rather than display:none, which some bots skip */
+  .quote__trap {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   /* --- footer --- */
