@@ -97,32 +97,57 @@
       <section class="panel panel--status">
         <p class="tag" id="livetag">
           <span class="dot" aria-hidden="true"></span>
-          <span data-slot="liveWord">Live</span>
+          <span data-slot="badge">Live</span>
         </p>
 
         <div class="statusBlock">
           <h1 class="status" data-slot="status">Loading…</h1>
           <p class="statusNote" data-slot="statusNote"></p>
+
+          <!-- Only appears when data.json carries an alert. -->
+          <aside class="alert" id="alert" hidden>
+            <span class="alert__mark" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M12 8v5M12 16.5v.01" />
+                <circle cx="12" cy="12" r="9" />
+              </svg>
+            </span>
+            <div class="alert__body">
+              <p class="alert__title" data-slot="alertTitle"></p>
+              <p class="alert__text" data-slot="alertBody"></p>
+              <a class="alert__action" id="alertaction" hidden></a>
+            </div>
+          </aside>
         </div>
 
-        <div class="eta">
-          <span class="eta__label" data-slot="etaLabel"></span>
-          <strong class="eta__time" data-slot="eta"></strong>
-        </div>
-
-        <div class="prog">
-          <div
-            class="prog__track"
-            role="progressbar"
-            id="progbar"
-            aria-valuemin="0"
-            aria-valuemax="100"
-            aria-valuenow="0"
-            aria-label="Delivery progress"
-          >
-            <div class="prog__fill" id="progfill"></div>
+        <div class="statusFoot">
+          <div class="eta" id="eta">
+            <span class="eta__label" data-slot="etaLabel"></span>
+            <strong class="eta__time" data-slot="eta"></strong>
           </div>
-          <ol class="prog__steps" id="steps"></ol>
+
+          <div class="prog" id="prog" style="--n: 5; --p: 0">
+            <div class="prog__rail" aria-hidden="true">
+              <div class="prog__fill"><i class="prog__head"></i></div>
+            </div>
+            <ol class="prog__steps" id="steps"></ol>
+            <div
+              class="sr-only"
+              id="progbar"
+              role="progressbar"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="0"
+              aria-label="Delivery progress"
+            ></div>
+          </div>
         </div>
       </section>
 
@@ -168,10 +193,10 @@
         var root = document.documentElement;
         var calm = matchMedia("(prefers-reduced-motion: reduce)");
 
-        /* ---------- theme switch (same as the landing page) ---------- */
+        /* ---------- theme switch ---------- */
         var btn = document.getElementById("theme");
         var meta = document.getElementById("themecolor");
-        var SHADE = { dark: "#0b0d10", light: "#f7f8fa" };
+        var SHADE = { dark: "#0b0d10", light: "#f4f6f9" };
 
         function current() {
           if (root.dataset.theme) return root.dataset.theme;
@@ -238,12 +263,17 @@
           return n;
         }
 
+        // Anything data.json doesn't define falls back to something sensible,
+        // so a typo in a state name can never leave the page blank.
+        var FALLBACK_STATE = { tone: "good", badge: "Tracking", live: true };
+
         /* ---------- the whole page, from the file ---------- */
         function render(d) {
           var brand = d.brand || {};
           var parcel = d.parcel || {};
           var steps = d.steps || [];
           var help = d.help || {};
+          var alert = d.alert || null;
 
           document.title =
             (parcel.reference || "Tracking") +
@@ -257,28 +287,36 @@
           if (brand.accentInk)
             root.style.setProperty("--acid-ink", brand.accentInk);
 
+          /* the state decides the colour of everything ------------------ */
+          var def = (d.states || {})[parcel.state] || FALLBACK_STATE;
+          root.dataset.tone = def.tone || "good";
+          root.dataset.state = parcel.state || "";
+
           slot("brandName", brand.name || "");
           slot("brandThin", brand.nameThin || "");
           slot("refLabel", parcel.label || "Tracking number");
           slot("reference", parcel.reference || "—");
-
-          // If someone arrived from the search box on the landing page, show the
-          // number they typed rather than the one sitting in data.json.
-          var typed = new URLSearchParams(location.search).get("n");
-          if (typed && typed.trim()) {
-            typed = typed.trim();
-            slot("reference", /^ORS/i.test(typed) ? typed : "ORS " + typed);
-          }
           slot("status", parcel.status || "");
           slot("statusNote", parcel.statusNote || "");
+          slot("badge", def.badge || "");
           slot("etaLabel", parcel.etaLabel || "");
           slot("eta", parcel.eta || "");
           slot("eventsTitle", d.eventsTitle || "Journey");
           slot("footer", d.footer || "");
           slot("helpLine", help.line || "");
-          slot("liveWord", parcel.liveWord || "Live");
 
-          document.getElementById("livetag").hidden = parcel.live === false;
+          var typed = new URLSearchParams(location.search).get("n");
+          if (typed && typed.trim()) {
+            typed = typed.trim();
+            slot("reference", /^ORS/i.test(typed) ? typed : "ORS " + typed);
+          }
+
+          document
+            .getElementById("livetag")
+            .classList.toggle("tag--still", def.live === false);
+          document.getElementById("eta").hidden = !(
+            parcel.eta || parcel.etaLabel
+          );
 
           var mail = document.getElementById("helpmail");
           var tel = document.getElementById("helptel");
@@ -287,54 +325,96 @@
           tel.textContent = help.phone || "";
           tel.href = "tel:" + String(help.phone || "").replace(/\s+/g, "");
 
-          /* progress --------------------------------------------------- */
-          var at = Math.max(
-            0,
-            Math.min(Number(parcel.currentStep) || 0, steps.length - 1),
-          );
-          var pct = steps.length > 1 ? (at / (steps.length - 1)) * 100 : 0;
+          /* anything gone wrong ----------------------------------------- */
+          var box = document.getElementById("alert");
+          if (alert && alert.show !== false && (alert.title || alert.body)) {
+            slot("alertTitle", alert.title || "");
+            slot("alertBody", alert.body || "");
+            var act = document.getElementById("alertaction");
+            if (alert.action && alert.action.label) {
+              act.textContent = alert.action.label;
+              act.href = alert.action.href || "#";
+              act.hidden = false;
+            } else {
+              act.hidden = true;
+            }
+            box.hidden = false;
+          } else {
+            box.hidden = true;
+          }
+
+          /* progress ----------------------------------------------------- */
+          // A step marked "now" wins; otherwise fall back to currentStep.
+          var marked = steps.findIndex(function (s) {
+            return s.state === "now" || s.state === "problem";
+          });
+          var at =
+            marked >= 0
+              ? marked
+              : Math.max(
+                  0,
+                  Math.min(Number(parcel.currentStep) || 0, steps.length - 1),
+                );
+          var p = steps.length > 1 ? at / (steps.length - 1) : 0;
+          if (def.complete) p = 1;
+
+          var prog = document.getElementById("prog");
+          prog.style.setProperty("--n", steps.length || 1);
+          prog.dataset.rest = def.rest || "known"; // "unknown" dashes the rest of the rail
 
           var list = document.getElementById("steps");
           list.textContent = "";
           steps.forEach(function (s, i) {
-            var li = el(
-              "li",
-              "pstep" + (i < at ? " is-done" : i === at ? " is-now" : ""),
-            );
+            // Explicit state in the file wins. Otherwise work it out from position.
+            var st =
+              s.state || (i < at ? "done" : i === at ? "now" : "pending");
+            var li = el("li", "pstep is-" + st);
             li.appendChild(el("span", "pstep__pip"));
-            li.appendChild(el("span", "pstep__label", s.label || ""));
+            // Two labels. CSS shows the long one normally and the short one on a
+            // phone, where five full labels would run into each other. A step
+            // with no "short" in data.json just reuses its label.
+            var lab = el("span", "pstep__label");
+            lab.appendChild(el("b", "pstep__long", s.label || ""));
+            lab.appendChild(el("b", "pstep__short", s.short || s.label || ""));
+            li.appendChild(lab);
             li.appendChild(el("span", "pstep__at", s.at || ""));
             list.appendChild(li);
           });
 
           var bar = document.getElementById("progbar");
-          bar.setAttribute("aria-valuenow", Math.round(pct));
+          bar.setAttribute("aria-valuenow", Math.round(p * 100));
           bar.setAttribute(
             "aria-valuetext",
             (steps[at] && steps[at].label) || "",
           );
-          // next frame, so the width animates from 0 instead of starting there
+          // next frame, so the fill grows from nothing instead of starting there
           requestAnimationFrame(function () {
-            document.getElementById("progfill").style.inlineSize = pct + "%";
+            prog.style.setProperty("--p", p);
           });
 
-          /* facts ------------------------------------------------------ */
+          /* facts ------------------------------------------------------- */
           var facts = document.getElementById("facts");
           facts.textContent = "";
           (d.details || []).forEach(function (row) {
-            // dt and dd wrapped together, so a label can never drift away
-            // from its value when the grid reflows.
-            var pair = el("div", "facts__row");
+            var pair = el(
+              "div",
+              "facts__row" + (row.tone ? " is-" + row.tone : ""),
+            );
             pair.appendChild(el("dt", "facts__k", row.label || ""));
             pair.appendChild(el("dd", "facts__v", row.value || ""));
             facts.appendChild(pair);
           });
 
-          /* journey ---------------------------------------------------- */
+          /* journey ----------------------------------------------------- */
           var events = document.getElementById("events");
           events.textContent = "";
           (d.events || []).forEach(function (e, i) {
-            var li = el("li", "event" + (i === 0 ? " is-latest" : ""));
+            var li = el(
+              "li",
+              "event" +
+                (i === 0 ? " is-latest" : "") +
+                (e.tone ? " is-" + e.tone : ""),
+            );
             var head = el("p", "event__head");
             head.appendChild(el("span", "event__time", e.time || ""));
             head.appendChild(el("span", "event__place", e.place || ""));

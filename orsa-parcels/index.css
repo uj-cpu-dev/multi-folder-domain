@@ -74,26 +74,44 @@
 
     --ease: cubic-bezier(0.2, 0.7, 0.25, 1);
 
+    /* Dark mode builds depth out of light, so the shadows are off here. */
+    --shadow-sm: 0 0 0 0 transparent;
+    --shadow: 0 0 0 0 transparent;
+    --shadow-lg: 0 0 0 0 transparent;
+
     color-scheme: dark;
   }
 
   /* Light, chosen by the button. */
   :root[data-theme="light"] {
-    --ink: oklch(0.21 0.015 262);
-    --ink-dim: oklch(0.44 0.016 262);
-    --ink-faint: oklch(0.56 0.014 262);
+    --ink: oklch(0.2 0.018 265);
+    --ink-dim: oklch(0.45 0.018 265);
+    --ink-faint: oklch(0.56 0.016 265);
 
-    --bg: oklch(0.985 0.004 250);
-    --bg-deep: oklch(0.955 0.006 250);
+    /* A little blue in the greys. Pure white on pure white was the
+       reason light mode looked like an unfinished wireframe. */
+    --bg: oklch(0.978 0.006 255);
+    --bg-deep: oklch(0.945 0.01 255);
     --surface: oklch(1 0 0);
-    --surface-2: oklch(0.975 0.004 250);
+    --surface-2: oklch(0.982 0.006 255);
 
-    --line: oklch(0.21 0.015 262 / 0.14);
-    --line-soft: oklch(0.21 0.015 262 / 0.08);
+    --line: oklch(0.35 0.03 265 / 0.13);
+    --line-soft: oklch(0.35 0.03 265 / 0.07);
 
-    --acid: oklch(0.76 0.19 131);
-    --acid-deep: oklch(0.66 0.17 132);
-    --acid-ink: oklch(0.18 0.05 130);
+    --acid: oklch(0.74 0.19 132);
+    --acid-deep: oklch(0.62 0.17 134);
+    --acid-ink: oklch(0.17 0.05 130);
+
+    /* and light mode builds depth out of shadow */
+    --shadow-sm:
+      0 1px 2px oklch(0.45 0.05 265 / 0.05),
+      0 3px 8px -4px oklch(0.42 0.05 265 / 0.1);
+    --shadow:
+      0 1px 2px oklch(0.45 0.05 265 / 0.05),
+      0 10px 24px -12px oklch(0.42 0.05 265 / 0.18);
+    --shadow-lg:
+      0 2px 4px oklch(0.45 0.05 265 / 0.05),
+      0 24px 50px -20px oklch(0.42 0.05 265 / 0.26);
 
     color-scheme: light;
   }
@@ -101,21 +119,31 @@
   /* Light, because the device asks for it and nothing was chosen. */
   @media (prefers-color-scheme: light) {
     :root:not([data-theme="dark"]) {
-      --ink: oklch(0.21 0.015 262);
-      --ink-dim: oklch(0.44 0.016 262);
-      --ink-faint: oklch(0.56 0.014 262);
+      --ink: oklch(0.2 0.018 265);
+      --ink-dim: oklch(0.45 0.018 265);
+      --ink-faint: oklch(0.56 0.016 265);
 
-      --bg: oklch(0.985 0.004 250);
-      --bg-deep: oklch(0.955 0.006 250);
+      --bg: oklch(0.978 0.006 255);
+      --bg-deep: oklch(0.945 0.01 255);
       --surface: oklch(1 0 0);
-      --surface-2: oklch(0.975 0.004 250);
+      --surface-2: oklch(0.982 0.006 255);
 
-      --line: oklch(0.21 0.015 262 / 0.14);
-      --line-soft: oklch(0.21 0.015 262 / 0.08);
+      --line: oklch(0.35 0.03 265 / 0.13);
+      --line-soft: oklch(0.35 0.03 265 / 0.07);
 
-      --acid: oklch(0.76 0.19 131);
-      --acid-deep: oklch(0.66 0.17 132);
-      --acid-ink: oklch(0.18 0.05 130);
+      --acid: oklch(0.74 0.19 132);
+      --acid-deep: oklch(0.62 0.17 134);
+      --acid-ink: oklch(0.17 0.05 130);
+
+      --shadow-sm:
+        0 1px 2px oklch(0.45 0.05 265 / 0.05),
+        0 3px 8px -4px oklch(0.42 0.05 265 / 0.1);
+      --shadow:
+        0 1px 2px oklch(0.45 0.05 265 / 0.05),
+        0 10px 24px -12px oklch(0.42 0.05 265 / 0.18);
+      --shadow-lg:
+        0 2px 4px oklch(0.45 0.05 265 / 0.05),
+        0 24px 50px -20px oklch(0.42 0.05 265 / 0.26);
 
       color-scheme: light;
     }
@@ -268,7 +296,8 @@
   }
 
   .btn--ghost {
-    background: color-mix(in oklab, var(--surface) 55%, transparent);
+    background: color-mix(in oklab, var(--surface) 72%, transparent);
+    box-shadow: var(--shadow-sm);
   }
   .btn--lg {
     padding: 15px 28px;
@@ -549,8 +578,9 @@
     padding: 7px 7px 7px 16px;
     border: 1px solid var(--line);
     border-radius: 999px;
-    background: color-mix(in oklab, var(--surface) 78%, transparent);
+    background: color-mix(in oklab, var(--surface) 86%, transparent);
     backdrop-filter: blur(12px);
+    box-shadow: var(--shadow);
     transition:
       border-color 0.22s var(--ease),
       box-shadow 0.22s var(--ease);
@@ -668,6 +698,7 @@
       color-mix(in oklab, var(--surface) 92%, transparent),
       color-mix(in oklab, var(--bg-deep) 92%, transparent)
     );
+    box-shadow: var(--shadow);
     transition:
       border-color 0.3s var(--ease),
       translate 0.3s var(--ease),
@@ -676,8 +707,9 @@
   .card:hover {
     translate: 0 -4px;
     border-color: color-mix(in oklab, var(--acid) 40%, var(--line));
-    box-shadow: 0 24px 50px -30px
-      color-mix(in oklab, var(--acid) 55%, transparent);
+    box-shadow:
+      var(--shadow-lg),
+      0 24px 50px -30px color-mix(in oklab, var(--acid) 55%, transparent);
   }
 
   .card--feature {
@@ -785,21 +817,48 @@
     grid-template-columns: repeat(auto-fit, minmax(258px, 1fr));
   }
   .step {
+    position: relative;
     padding: clamp(22px, 2.4vw, 30px);
-    border: 1px solid var(--line-soft);
+    border: 1px solid var(--line);
     border-radius: var(--r-lg);
-    background: color-mix(in oklab, var(--surface) 55%, transparent);
-    transition: border-color 0.3s var(--ease);
+    background:
+      linear-gradient(
+        165deg,
+        color-mix(in oklab, var(--acid) 5%, transparent),
+        transparent 42%
+      ),
+      color-mix(in oklab, var(--surface) 92%, transparent);
+    box-shadow: var(--shadow-sm);
+    transition:
+      border-color 0.3s var(--ease),
+      box-shadow 0.3s var(--ease),
+      translate 0.3s var(--ease);
   }
   .step:hover {
-    border-color: var(--line);
+    translate: 0 -3px;
+    border-color: color-mix(in oklab, var(--acid) 32%, var(--line));
+    box-shadow: var(--shadow);
   }
   .step__no {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     font-family: var(--mono);
     font-size: 13px;
-    color: var(--acid);
-    letter-spacing: 0.08em;
+    font-weight: 500;
+    color: var(--acid-deep);
+    letter-spacing: 0.1em;
     margin-block-end: 16px;
+  }
+  .step__no::after {
+    content: "";
+    flex: 1 1 auto;
+    block-size: 1px;
+    background: linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--acid) 45%, transparent),
+      transparent
+    );
   }
   .step__title {
     font-size: 1.3rem;
@@ -836,6 +895,7 @@
     border-radius: var(--r-lg);
     overflow: hidden;
     background: var(--line-soft);
+    box-shadow: var(--shadow);
   }
   .coverage__list li {
     display: flex;
@@ -1015,8 +1075,14 @@
     scroll-margin-top: 80px;
   }
   .section--alt {
-    background: var(--bg-deep);
-    border-block: 1px solid var(--line-soft);
+    background:
+      radial-gradient(
+        ellipse 60% 70% at 85% 0%,
+        color-mix(in oklab, var(--acid) 7%, transparent),
+        transparent 60%
+      ),
+      var(--bg-deep);
+    border-block: 1px solid var(--line);
   }
   .cta {
     scroll-margin-top: 80px;

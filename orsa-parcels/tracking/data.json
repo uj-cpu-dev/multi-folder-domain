@@ -1,5 +1,15 @@
 {
-  "_comment": "Everything on the page comes from this file. Change it here, refresh, done. Nothing is hard-coded in index.html.",
+  "_comment": [
+    "Everything on the page comes from this file. Change it, refresh, done.",
+    "",
+    "The one key that changes everything is parcel.state. It picks a colour,",
+    "a badge word and how the progress bar behaves. Set it to 'failed' and",
+    "the whole screen turns amber, the bar stops where the parcel stopped,",
+    "and the rest of the journey goes dashed because it is no longer known.",
+    "",
+    "Add your own states to the 'states' block below. A state needs a tone",
+    "(good, done, warn, bad, cool, mute) and a badge word. Nothing else."
+  ],
 
   "brand": {
     "name": "Orsa",
@@ -10,23 +20,109 @@
     "accentInk": "oklch(0.20 0.06 130)"
   },
 
+  "states": {
+    "booked": { "tone": "cool", "badge": "Booked", "live": false },
+    "in_transit": { "tone": "good", "badge": "Live", "live": true },
+    "out_for_delivery": { "tone": "good", "badge": "Live", "live": true },
+    "delivered": {
+      "tone": "done",
+      "badge": "Delivered",
+      "live": false,
+      "complete": true
+    },
+    "delayed": { "tone": "warn", "badge": "Delayed", "live": true },
+    "on_hold": {
+      "tone": "warn",
+      "badge": "On hold",
+      "live": false,
+      "rest": "unknown"
+    },
+    "attempted": {
+      "tone": "warn",
+      "badge": "Attempted",
+      "live": false,
+      "rest": "unknown"
+    },
+    "needs_you": {
+      "tone": "bad",
+      "badge": "Action needed",
+      "live": false,
+      "rest": "unknown"
+    },
+    "damaged": {
+      "tone": "bad",
+      "badge": "Damaged",
+      "live": false,
+      "rest": "unknown"
+    },
+    "lost": {
+      "tone": "bad",
+      "badge": "Investigating",
+      "live": false,
+      "rest": "unknown"
+    },
+    "returning": {
+      "tone": "cool",
+      "badge": "Coming back",
+      "live": true,
+      "rest": "unknown"
+    },
+    "cancelled": {
+      "tone": "mute",
+      "badge": "Cancelled",
+      "live": false,
+      "rest": "unknown"
+    }
+  },
+
   "parcel": {
     "reference": "ORS 4821 9930 7744",
     "label": "Tracking number",
+    "state": "out_for_delivery",
     "status": "Out for delivery",
     "statusNote": "On the van with Daniel. He has 9 stops before yours.",
-    "live": true,
     "etaLabel": "Expected today",
     "eta": "14:00 – 16:00",
     "currentStep": 3
   },
 
+  "alert": {
+    "_comment": "Delete this whole block when there is nothing wrong. It only appears when it is here.",
+    "show": false,
+    "title": "We tried on Tuesday and nobody was in",
+    "body": "It needs a signature, so we took it back to the depot. Pick a new day and we will bring it again — no charge.",
+    "action": {
+      "label": "Pick a new day",
+      "href": "mailto:hello@orsaparcels.com"
+    }
+  },
+
   "steps": [
-    { "label": "Booked", "at": "Mon 09:12" },
-    { "label": "Collected", "at": "Mon 16:40" },
-    { "label": "At the depot", "at": "Mon 23:05" },
-    { "label": "On the van", "at": "Tue 07:18" },
-    { "label": "Delivered", "at": "" }
+    {
+      "label": "Booked",
+      "short": "Booked",
+      "at": "Mon 09:12",
+      "state": "done"
+    },
+    {
+      "label": "Collected",
+      "short": "Picked up",
+      "at": "Mon 16:40",
+      "state": "done"
+    },
+    {
+      "label": "At the depot",
+      "short": "Depot",
+      "at": "Mon 23:05",
+      "state": "done"
+    },
+    {
+      "label": "On the van",
+      "short": "On the van",
+      "at": "Tue 07:18",
+      "state": "now"
+    },
+    { "label": "Delivered", "short": "Done", "at": "", "state": "pending" }
   ],
 
   "details": [
