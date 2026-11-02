@@ -28,6 +28,114 @@
   </head>
 
   <body>
+    <!-- Icon sprite. data.json names one with "icon": "clock" and it appears
+     on that fact's tile. Add your own <symbol> here and it just works. -->
+    <svg class="sprite" aria-hidden="true" focusable="false">
+      <symbol
+        id="i-clock"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <circle cx="12" cy="12" r="8.6" />
+        <path d="M12 7.4V12l3.1 2" />
+      </symbol>
+      <symbol
+        id="i-scales"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path
+          d="M12 4.4v15.2M7 19.6h10M4.2 8.6h15.6M12 8.6 8.2 7.2M12 8.6l3.8-1.4"
+        />
+        <path
+          d="M4.2 8.6 1.9 14a2.6 2.6 0 0 0 4.6 0zM19.8 8.6 17.5 14a2.6 2.6 0 0 0 4.6 0z"
+        />
+      </symbol>
+      <symbol
+        id="i-boxes"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linejoin="round"
+        stroke-linecap="round"
+      >
+        <path d="M12 2.9 20.4 7.5v9L12 21.1 3.6 16.5v-9z" />
+        <path d="M3.6 7.5 12 12.1l8.4-4.6M12 12.1v9" />
+      </symbol>
+      <symbol
+        id="i-pen"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path
+          d="M3 20.4c2.6 0 3.4-3 5-7.4s3-7 4.6-7 1.5 2.4.4 5.6S10 19 12.2 19c1.7 0 2.6-1.4 3.2-2.6"
+        />
+        <path d="M14.6 16.6H21" />
+      </symbol>
+      <symbol
+        id="i-van"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M1.9 16.3V6.4h12.2v9.9M14.1 9.3h3.6l3.5 3.6v3.4" />
+        <circle cx="6.6" cy="17.6" r="1.9" />
+        <circle cx="17" cy="17.6" r="1.9" />
+      </symbol>
+      <symbol
+        id="i-pin"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M12 21.3s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z" />
+        <circle cx="12" cy="10.2" r="2.6" />
+      </symbol>
+      <symbol
+        id="i-shield"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M12 2.8 20 6v6.2c0 4.6-3.3 7.8-8 9-4.7-1.2-8-4.4-8-9V6z" />
+        <path d="m8.9 11.9 2.2 2.2 4-4.2" />
+      </symbol>
+      <symbol
+        id="i-calendar"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <rect x="3.4" y="5.2" width="17.2" height="15.4" rx="2.4" />
+        <path d="M3.4 10h17.2M8.4 3.4v3.6M15.6 3.4v3.6" />
+      </symbol>
+    </svg>
+
     <!-- Nothing below is written by hand. Every word, number and colour is
      read from data.json and poured into these slots. -->
 
@@ -430,8 +538,26 @@
               "div",
               "facts__row" + (row.tone ? " is-" + row.tone : ""),
             );
-            pair.appendChild(el("dt", "facts__k", row.label || ""));
-            pair.appendChild(el("dd", "facts__v", row.value || ""));
+            if (row.icon) {
+              var ic = document.createElementNS(
+                "http://www.w3.org/2000/svg",
+                "svg",
+              );
+              ic.setAttribute("class", "facts__icon");
+              ic.setAttribute("aria-hidden", "true");
+              var use = document.createElementNS(
+                "http://www.w3.org/2000/svg",
+                "use",
+              );
+              use.setAttribute("href", "#i-" + row.icon);
+              ic.appendChild(use);
+              pair.appendChild(ic);
+              pair.classList.add("has-icon");
+            }
+            var txt = el("div", "facts__text");
+            txt.appendChild(el("dt", "facts__k", row.label || ""));
+            txt.appendChild(el("dd", "facts__v", row.value || ""));
+            pair.appendChild(txt);
             facts.appendChild(pair);
           });
 

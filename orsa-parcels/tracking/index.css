@@ -72,6 +72,11 @@
     --tone-ink: var(--acid-ink);
     --tone-text: var(--tone);
 
+    /* A cool second accent. Everything was lit by one green lamp, which is
+       what made the panels read flat. This is the light from the other side.
+       It never carries meaning — the state colour does that. */
+    --accent-2: oklch(0.62 0.13 255);
+
     /* dark mode uses light, not shadow, so these are off here */
     --shadow: 0 0 0 0 transparent;
     --shadow-lg: 0 0 0 0 transparent;
@@ -133,6 +138,7 @@
     --acid-deep: oklch(0.6 0.17 134);
 
     --tone-text: var(--tone-deep);
+    --accent-2: oklch(0.72 0.1 250);
 
     /* light mode gets depth from shadow instead of glow */
     --shadow:
@@ -181,6 +187,7 @@
       --acid-deep: oklch(0.6 0.17 134);
 
       --tone-text: var(--tone-deep);
+      --accent-2: oklch(0.72 0.1 250);
 
       --shadow:
         0 1px 2px oklch(0.45 0.05 265 / 0.05),
@@ -218,7 +225,13 @@
   }
 
   body {
-    min-block-size: 100dvh;
+    /* block-size, not min-block-size. With a minimum, the body simply grows
+       taller than the window when the content needs more room, and
+       overflow:hidden then cuts the bottom off with no way to reach it.
+       A fixed height forces the middle column to take the strain and
+       scroll itself instead. */
+    block-size: 100dvh;
+    max-block-size: 100dvh;
     margin: 0;
     overflow: hidden; /* the whole point: no page scroll */
     background:
@@ -229,7 +242,7 @@
       ),
       radial-gradient(
         ellipse 55% 45% at 4% 104%,
-        color-mix(in oklab, var(--tone) 8%, transparent),
+        color-mix(in oklab, var(--accent-2) 16%, transparent),
         transparent 60%
       ),
       var(--bg);
@@ -309,9 +322,14 @@
     border: 1px solid var(--line);
     border-radius: var(--r-lg);
     background:
+      radial-gradient(
+        ellipse 90% 70% at 100% 100%,
+        color-mix(in oklab, var(--accent-2) 10%, transparent),
+        transparent 62%
+      ),
       linear-gradient(
         158deg,
-        color-mix(in oklab, var(--tone) 7%, transparent),
+        color-mix(in oklab, var(--tone) 8%, transparent),
         transparent 48%
       ),
       color-mix(in oklab, var(--surface) 88%, transparent);
@@ -878,17 +896,65 @@
     display: grid;
     gap: 3px;
     min-inline-size: 0;
-    padding: 11px 13px;
+    padding: 12px 14px;
     border: 1px solid var(--line-soft);
-    border-radius: 12px;
-    background: color-mix(in oklab, var(--surface-2) 60%, transparent);
+    border-radius: 13px;
+    background:
+      linear-gradient(
+        150deg,
+        color-mix(in oklab, var(--tone) 5%, transparent),
+        transparent 60%
+      ),
+      color-mix(in oklab, var(--surface-2) 70%, transparent);
     transition:
       border-color 0.25s var(--ease),
-      background 0.25s var(--ease);
+      background 0.25s var(--ease),
+      translate 0.25s var(--ease);
+  }
+  .facts__row.has-icon {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
   }
   .facts__row:hover {
-    border-color: var(--line);
-    background: color-mix(in oklab, var(--surface-2) 90%, transparent);
+    translate: 0 -2px;
+    border-color: color-mix(in oklab, var(--tone) 30%, var(--line));
+    background:
+      linear-gradient(
+        150deg,
+        color-mix(in oklab, var(--tone) 9%, transparent),
+        transparent 60%
+      ),
+      color-mix(in oklab, var(--surface-2) 95%, transparent);
+  }
+  .facts__text {
+    display: grid;
+    gap: 2px;
+    min-inline-size: 0;
+  }
+
+  .facts__icon {
+    inline-size: 34px;
+    block-size: 34px;
+    padding: 7px;
+    border-radius: 10px;
+    color: var(--tone-text);
+    background: color-mix(in oklab, var(--tone) 14%, transparent);
+    box-shadow: inset 0 0 0 1px
+      color-mix(in oklab, var(--tone) 22%, transparent);
+    transition:
+      background 0.25s var(--ease),
+      scale 0.25s var(--ease);
+  }
+  .facts__row:hover .facts__icon {
+    background: color-mix(in oklab, var(--tone) 22%, transparent);
+    scale: 1.06;
+  }
+  .sprite {
+    position: absolute;
+    inline-size: 0;
+    block-size: 0;
+    overflow: hidden;
   }
   .facts__k {
     font-family: var(--mono);
@@ -1058,8 +1124,23 @@
   .bar__refLabel {
     display: none;
   }
+  /* trim the tiles so a phone still fits the journey without scrolling */
   .facts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .facts__row {
+    padding: 9px 11px;
+    border-radius: 11px;
+  }
+  .facts__row.has-icon {
+    gap: 9px;
+  }
+  .facts__icon {
+    inline-size: 28px;
+    block-size: 28px;
+    padding: 5.5px;
+    border-radius: 8px;
   }
   .panel--status {
     grid-template-rows: auto auto auto;
@@ -1093,14 +1174,56 @@
     --pip: 11px;
     --rail: 6px;
   }
+
+  /* the middle column is too narrow here, and the via text does not wrap,
+     so it runs over the place names either side of it */
+  .route__via {
+    display: none;
+  }
+  .route {
+    gap: 10px;
+  }
+  .route__v {
+    font-size: 0.95rem;
+  }
 }
 
-@media (max-height: 620px) and (max-width: 880px) {
+/* When the window is genuinely too small for everything at once, the middle
+   column scrolls rather than the panels being squashed and their contents
+   spilling out of the bottom edge. Nothing is ever hidden or clipped, and
+   where it all fits — which is every phone I tested — no scrollbar appears
+   and the screen behaves exactly as before. */
+@media (max-width: 880px), (max-height: 760px) {
+  .stage {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+    /* min-content, not auto. An "auto" row is allowed to shrink below its
+       contents when the grid has a fixed height, which is exactly what was
+       happening: the status panel was handed 125px for 342px of content and
+       the progress bar spilled out underneath it. */
+    /* min-content for the first two, NOT auto. An "auto" row is allowed to
+       shrink below its contents when the grid has a fixed height, which is
+       exactly what went wrong: the status panel was handed 125px for 342px
+       of content and the progress bar spilled out underneath it.
+       The journey keeps a flexible row so it absorbs whatever is left and
+       scrolls inside itself — that is what keeps a phone on one screen. */
+    grid-template-rows: min-content min-content minmax(132px, 1fr);
+    align-content: start;
+  }
+  .panel {
+    min-block-size: min-content;
+  }
+}
+
+/* Lying on its side there is no room for the journey as well. The status
+   and the bar are what someone checking a parcel actually came for. */
+@media (max-height: 480px) and (max-width: 1000px) {
   .panel--events {
     display: none;
   }
   .stage {
-    grid-template-rows: minmax(0, 1fr) auto;
     grid-template-areas: "status" "facts";
   }
   .foot__note {
