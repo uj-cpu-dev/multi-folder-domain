@@ -135,10 +135,10 @@
   },
 
   "details": [
-    { "label": "Service", "value": "Overnight" },
-    { "label": "Weight", "value": "2.4 kg" },
-    { "label": "Pieces", "value": "1 of 1" },
-    { "label": "On arrival", "value": "Signature" }
+    { "label": "Service", "value": "Overnight", "icon": "clock" },
+    { "label": "Weight", "value": "2.4 kg", "icon": "scales" },
+    { "label": "Pieces", "value": "1 of 1", "icon": "boxes" },
+    { "label": "On arrival", "value": "Signature", "icon": "pen" }
   ],
 
   "eventsTitle": "Journey",
